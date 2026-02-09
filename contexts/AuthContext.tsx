@@ -79,20 +79,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('Setting up auth listener');
+    console.log('🔐 Setting up auth listener');
 
     const timeoutId = setTimeout(() => {
       if (isLoading) {
-        console.warn('Auth initialization timeout - setting isLoading to false');
+        console.warn('⏱️ Auth initialization timeout - setting isLoading to false');
         setIsLoading(false);
       }
-    }, 3000);
+    }, 5000);
 
     try {
       const { data: authListener } = authService.onAuthStateChange((uid, authUser) => {
         (async () => {
           try {
-            console.log('Auth state changed, uid:', uid);
+            console.log('🔄 Auth state changed, uid:', uid);
             clearTimeout(timeoutId);
             setUser(authUser);
             setUserId(uid);
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             setIsLoading(false);
           } catch (error) {
-            console.error('Error in auth state change handler:', error);
+            console.error('❌ Error in auth state change handler:', error);
             setIsLoading(false);
           }
         })();
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authListener.subscription.unsubscribe();
       };
     } catch (error) {
-      console.error('Error setting up auth listener:', error);
+      console.error('❌ Error setting up auth listener:', error);
       setIsLoading(false);
     }
   }, []);
