@@ -3,13 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
-  Clipboard,
   Platform,
   Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Mic, MicOff, Volume2, Copy, RotateCw } from 'lucide-react-native';
 
 import { voiceOS } from '@/services/voiceOSService';
@@ -219,10 +219,10 @@ export default function VoiceAssistantScreen() {
   /**
    * Copy transcript to clipboard
    */
-  const handleCopyTranscript = async () => {
+  const handleCopyTranscript = () => {
     if (state.transcript) {
       try {
-        await Clipboard.setString(state.transcript);
+        Clipboard.setString(state.transcript);
         Alert.alert('Copied', 'Transcript copied to clipboard');
       } catch (error) {
         console.error('Failed to copy:', error);

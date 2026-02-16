@@ -1,9 +1,5 @@
 import { supabase } from '@/lib/supabase';
-
-/**
- * NOTE: OpenAI API calls are made via fetch directly.
- * For production, implement a backend proxy using server-side environment variables.
- */
+import { getEmbeddingsEndpoint, fetchWithErrorHandling } from '@/lib/apiConfig';
 
 export interface KnowledgeDocument {
   id: string;
@@ -78,8 +74,9 @@ class KnowledgeService {
   /**
    * Upsert document (insert or update if exists)
    * Prevents duplicate entries by checking title and category
+   * @returns true if inserted, false if already existed
    */
-  async upsertDocument(document: Omit<KnowledgeDocument, 'id' | 'embedding'>): Promise<void> {
+  async upsertDocument(document: Omit<KnowledgeDocument, 'id' | 'embedding'>): Promise<boolean> {
     try {
       // Check if document already exists by title
       const { data: existing } = await supabase
@@ -92,11 +89,12 @@ class KnowledgeService {
       // If exists, skip insertion
       if (existing && existing.length > 0) {
         console.log('⏭️ Document already exists (skipping):', document.metadata.title);
-        return;
+        return false;
       }
 
       // Otherwise, add the document
       await this.addDocument(document);
+      return true;
     } catch (error) {
       console.error('❌ Error upserting document:', error);
       throw error;
@@ -173,29 +171,26 @@ class KnowledgeService {
   }
 
   /**
-   * Generate embedding using OpenAI
+   * Generate embedding using backend proxy endpoint
+   * The actual OpenAI API call is made server-side for security
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'text-embedding-ada-002',
-          input: text,
-        }),
-      });
+      // Call backend proxy endpoint via Supabase Edge Function
+      const endpoint = getEmbeddingsEndpoint();
+      
+      const data = await fetchWithErrorHandling<{ embedding: number[] }>(
+        endpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Embedding API error: ${error.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-      return data.data[0].embedding;
+      return data.embedding;
     } catch (error) {
       console.error('❌ Embedding generation failed:', error);
       throw error;
@@ -215,8 +210,12 @@ class KnowledgeService {
     for (const doc of documents) {
       try {
         // Use upsert to prevent duplicates
-        await this.upsertDocument(doc);
-        loaded++;
+        const inserted = await this.upsertDocument(doc);
+        if (inserted) {
+          loaded++;
+        } else {
+          skipped++;
+        }
       } catch (error) {
         console.error(`❌ Failed to load: ${doc.metadata.title}`, error);
         skipped++;

@@ -3,11 +3,7 @@ import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
 import { knowledgeService } from './knowledgeService';
 import { actionEngine } from './actionEngine';
-
-/**
- * NOTE: OpenAI API calls are made via fetch directly.
- * For production, implement a backend proxy using server-side environment variables.
- */
+import { getTranscribeEndpoint, fetchWithErrorHandling } from '@/lib/apiConfig';
 
 export interface VoiceCommand {
   transcript: string;
@@ -100,8 +96,8 @@ class VoiceOSService {
   }
 
   /**
-   * Transcribe audio using OpenAI Whisper
-   * Uses FormData for React Native 0.81.5 compatibility
+   * Transcribe audio using backend proxy endpoint
+   * The actual OpenAI Whisper API call is made server-side for security
    */
   private async transcribeAudio(audioUri: string): Promise<string> {
     try {
@@ -109,31 +105,48 @@ class VoiceOSService {
       const response = await fetch(audioUri);
       const blob = await response.blob();
       
-      // Create FormData for multipart upload (React Native compatible)
+      // Create FormData for multipart upload
+      // Use URI-based file format compatible with React Native
       const formData = new FormData();
-      formData.append('file', blob, 'audio.m4a');
-      formData.append('model', 'whisper-1');
+      
+      // For React Native, pass file as URI-based object
+      formData.append('file', {
+        uri: audioUri,
+        type: 'audio/m4a',
+        name: 'audio.m4a',
+      } as any);
+      
       formData.append('language', 'en');
 
-      // Call Whisper API directly via fetch
-      // NOTE: API key is exposed here. For production, use a backend proxy.
-      const transcriptionResponse = await fetch(
-        'https://api.openai.com/v1/audio/transcriptions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
-          },
-          body: formData,
-        }
-      );
+      // Call backend proxy endpoint via Supabase Edge Function
+      const endpoint = getTranscribeEndpoint();
+      
+      const transcribeResponse = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (!transcriptionResponse.ok) {
-        const error = await transcriptionResponse.json();
-        throw new Error(`Whisper API error: ${error.error?.message || 'Unknown error'}`);
+      if (!transcribeResponse.ok) {
+        let errorMessage = 'Unknown error';
+        
+        // Try to parse JSON error first
+        try {
+          const errorData = await transcribeResponse.json();
+          errorMessage = errorData.error?.message || errorData.message || 'Unknown error';
+        } catch {
+          // Fall back to text response
+          try {
+            const textError = await transcribeResponse.text();
+            errorMessage = textError || `HTTP ${transcribeResponse.status}`;
+          } catch {
+            errorMessage = `HTTP ${transcribeResponse.status}: Failed to transcribe`;
+          }
+        }
+        
+        throw new Error(`Whisper API error: ${errorMessage}`);
       }
 
-      const data = await transcriptionResponse.json();
+      const data = await transcribeResponse.json();
       return data.text;
     } catch (error) {
       console.error('❌ Whisper transcription failed:', error);
