@@ -1,9 +1,10 @@
-import OpenAI from 'openai';
 import { supabase } from '@/lib/supabase';
+import { fetchWithErrorHandling } from '@/lib/apiConfig';
 
-const openai = new OpenAI({
-  apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
-});
+const getClassifyIntentEndpoint = () => {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  return `${supabaseUrl}/functions/v1/classify-intent`;
+};
 
 export interface Intent {
   type: 'knowledge' | 'action';
@@ -91,65 +92,26 @@ class ActionEngine {
   }
 
   /**
-   * Classify user intent using GPT
+   * Classify user intent using GPT via backend proxy
    * Returns structured intent with action parameters
    */
   async classifyIntent(query: string, context: string = ''): Promise<Intent> {
     try {
       console.log('🎯 Classifying intent for:', query);
 
-      // Use GPT to classify intent
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are WeVysya Assistant's intent classifier.
-
-Analyze the user's query and determine if it's:
-1. A KNOWLEDGE question (asking about WeVysya, members, houses, events, etc.)
-2. An ACTION command (wants to perform a task)
-
-Available actions:
-- search_member: Find members by profession, industry, or location
-- post_deal: Create a new business deal
-- view_deals: Browse available deals
-- send_link: Send a link request
-- create_i2we: Create an i2we connection
-- view_profile: View user profile
-- view_channels: Browse channels
-- view_activity: View recent activity
-
-Context from knowledge base:
-${context}
-
-Respond with a JSON object:
-{
-  "type": "knowledge" or "action",
-  "category": "for knowledge: members/houses/events/general, for action: the action name",
-  "parameters": {},
-  "response": "friendly response to user",
-  "confidence": 0.0-1.0
-}
-
-Examples:
-Query: "Find a CA in Bengaluru"
-Response: {"type": "action", "category": "search_member", "parameters": {"profession": "CA", "location": "Bengaluru"}, "response": "I'll find CAs in Bengaluru for you!", "confidence": 0.95}
-
-Query: "What is WeVysya?"
-Response: {"type": "knowledge", "category": "general", "parameters": {}, "response": "Based on our knowledge base...", "confidence": 0.90}`,
+      // Call backend proxy for intent classification
+      const intentData = await fetchWithErrorHandling<any>(
+        getClassifyIntentEndpoint(),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          {
-            role: 'user',
-            content: query,
-          },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.3,
-      });
-
-      const intentData = JSON.parse(
-        completion.choices[0].message.content || '{}'
+          body: JSON.stringify({
+            query,
+            context,
+          }),
+        }
       );
 
       // Build structured intent

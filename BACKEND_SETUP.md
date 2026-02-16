@@ -5,8 +5,9 @@ This guide explains how to set up secure backend proxies for OpenAI API calls th
 ## Overview
 
 The mobile app client-side code now calls these backend endpoints instead of directly calling OpenAI:
-- `POST /rest/v1/functions/embeddings` - Generate embeddings
-- `POST /rest/v1/functions/transcribe` - Transcribe audio
+- `POST /functions/v1/embeddings` - Generate embeddings for knowledge base search
+- `POST /functions/v1/transcribe` - Transcribe audio to text via Whisper
+- `POST /functions/v1/classify-intent` - Classify user intent and extract action parameters
 
 These are Supabase Edge Functions that securely proxy OpenAI API calls using a server-side API key.
 
@@ -30,6 +31,9 @@ supabase functions deploy embeddings
 
 # Deploy transcribe function
 supabase functions deploy transcribe
+
+# Deploy classify-intent function
+supabase functions deploy classify-intent
 ```
 
 Verify deployment:
@@ -39,13 +43,14 @@ supabase functions list
 
 ### 3. Update Client Configuration
 
-The client code is already configured to call these endpoints. They use the pattern:
+The client code is already configured to call these endpoints via `lib/apiConfig.ts`. They use the pattern:
 - Local development: `http://localhost:54321/functions/v1/{function_name}`
 - Production: `https://{project_id}.supabase.co/functions/v1/{function_name}`
 
 The endpoints are called from:
-- `services/knowledgeService.ts` - POST `/api/embeddings`
-- `services/voiceOSService.ts` - POST `/api/transcribe`
+- `services/knowledgeService.ts` - POST `/functions/v1/embeddings` (via `getEmbeddingsEndpoint()`)
+- `services/voiceOSService.ts` - POST `/functions/v1/transcribe` (via `getTranscribeEndpoint()`)
+- `services/actionEngine.ts` - POST `/functions/v1/classify-intent` (via `getClassifyIntentEndpoint()`)
 
 ### 4. Update Fetch Calls
 
@@ -97,31 +102,33 @@ curl -X POST http://localhost:54321/functions/v1/transcribe \
   -F "language=en"
 ```
 
-### 7. Updating Routes in Client Code
+Test the classify-intent function:
+```bash
+curl -X POST http://localhost:54321/functions/v1/classify-intent \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Find a CA in Bangalore", "context": ""}'
+```
 
-Current client code calls:
-- `/api/embeddings` 
-- `/api/transcribe`
+### 7. Client Code Configuration
 
-If using Supabase functions, update these URLs to match your deployment:
+The client code is already properly configured to call the Supabase Edge Functions:
 
 **In `services/knowledgeService.ts`:**
-```typescript
-// Change from:
-const response = await fetch('/api/embeddings', {
-
-// To:
-const response = await fetch(`${SUPABASE_URL}/functions/v1/embeddings`, {
-```
+- Imports `getEmbeddingsEndpoint()` from `lib/apiConfig.ts`
+- Calls `fetch(getEmbeddingsEndpoint(), ...)` which resolves to `{SUPABASE_URL}/functions/v1/embeddings`
 
 **In `services/voiceOSService.ts`:**
-```typescript
-// Change from:
-const response = await fetch('/api/transcribe', {
+- Imports `getTranscribeEndpoint()` from `lib/apiConfig.ts`
+- Calls `fetch(getTranscribeEndpoint(), ...)` which resolves to `${SUPABASE_URL}/functions/v1/transcribe`
 
-// To:
-const response = await fetch(`${SUPABASE_URL}/functions/v1/transcribe`, {
-```
+**In `services/actionEngine.ts`:**
+- Has inline `getClassifyIntentEndpoint()` function
+- Calls `fetchWithErrorHandling(getClassifyIntentEndpoint(), ...)` which resolves to `${SUPABASE_URL}/functions/v1/classify-intent`
+
+**In `lib/apiConfig.ts`:**
+- Provides centralized endpoint configuration
+- Helper functions automatically construct the correct URLs
+- Includes safe error handling with fallbacks
 
 ### 8. Alternative: Express Backend
 

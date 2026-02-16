@@ -10,14 +10,29 @@ if (!openaiApiKey) {
   throw new Error('Missing OPENAI_API_KEY environment variable');
 }
 
+// CORS headers for browser clients
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
         status: 405,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }
@@ -33,7 +48,7 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Invalid request: file field is required' }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
@@ -44,7 +59,7 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Invalid language parameter' }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
@@ -85,7 +100,7 @@ serve(async (req: Request) => {
         JSON.stringify({ error: errorMessage }),
         {
           status: openaiResponse.status,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
@@ -99,7 +114,7 @@ serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   } catch (error) {
@@ -111,7 +126,7 @@ serve(async (req: Request) => {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }

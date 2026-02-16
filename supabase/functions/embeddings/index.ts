@@ -13,14 +13,29 @@ if (!openaiApiKey) {
   throw new Error('Missing OPENAI_API_KEY environment variable');
 }
 
+// CORS headers for browser clients
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
         status: 405,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }
@@ -34,7 +49,7 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Invalid request: text field is required' }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
@@ -45,7 +60,7 @@ serve(async (req: Request) => {
         JSON.stringify({ error: 'Text too long (max 8000 characters)' }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
@@ -73,12 +88,32 @@ serve(async (req: Request) => {
         }),
         {
           status: openaiResponse.status,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
 
     const data = await openaiResponse.json();
+    
+    // Defensive check for embedding response structure
+    if (
+      !data ||
+      !Array.isArray(data.data) ||
+      data.data.length === 0 ||
+      typeof data.data[0].embedding === 'undefined'
+    ) {
+      console.error('Invalid OpenAI response structure:', data);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid response from OpenAI: missing embedding data',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
     const embedding = data.data[0].embedding;
 
     // Return only the embedding (cleaner API response)
@@ -88,7 +123,7 @@ serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   } catch (error) {
@@ -100,7 +135,7 @@ serve(async (req: Request) => {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       }
     );
   }

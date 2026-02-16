@@ -52,7 +52,22 @@ export async function fetchWithErrorHandling<T>(
       // Try to parse JSON error
       try {
         const errorData = await response.json();
-        errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        
+        // Handle different error response shapes from Edge Functions
+        if (typeof errorData.error === 'string') {
+          // Error is a string: { error: "message" }
+          errorMessage = errorData.error;
+        } else if (
+          typeof errorData.error === 'object' &&
+          errorData.error !== null &&
+          'message' in errorData.error
+        ) {
+          // Error is an object: { error: { message: "text" } }
+          errorMessage = errorData.error.message;
+        } else if (typeof errorData.message === 'string') {
+          // Fallback to message field: { message: "text" }
+          errorMessage = errorData.message;
+        }
       } catch {
         // Fall back to text if JSON parsing fails
         try {
