@@ -70,6 +70,12 @@ on public.knowledge_base for select
 to authenticated
 using (true);
 
+-- Allow authenticated users to insert knowledge documents
+create policy "Authenticated users can insert knowledge"
+on public.knowledge_base for insert
+to authenticated
+with check (true);
+
 -- Allow service role to manage knowledge (for admin operations)
 create policy "Service role can manage knowledge"
 on public.knowledge_base

@@ -1,14 +1,13 @@
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
-import OpenAI from 'openai';
 import { Platform } from 'react-native';
 import { knowledgeService } from './knowledgeService';
 import { actionEngine } from './actionEngine';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
-});
+/**
+ * NOTE: OpenAI API calls are made via fetch directly.
+ * For production, implement a backend proxy using server-side environment variables.
+ */
 
 export interface VoiceCommand {
   transcript: string;
@@ -102,30 +101,40 @@ class VoiceOSService {
 
   /**
    * Transcribe audio using OpenAI Whisper
+   * Uses FormData for React Native 0.81.5 compatibility
    */
   private async transcribeAudio(audioUri: string): Promise<string> {
     try {
-      // For web or if file system is different, handle accordingly
-      if (Platform.OS === 'web') {
-        // Web implementation would use fetch blob
-        throw new Error('Web transcription not yet implemented');
-      }
-
       // Read audio file
       const response = await fetch(audioUri);
       const blob = await response.blob();
       
-      // Create File object for OpenAI
-      const file = new File([blob], 'audio.m4a', { type: 'audio/m4a' });
+      // Create FormData for multipart upload (React Native compatible)
+      const formData = new FormData();
+      formData.append('file', blob, 'audio.m4a');
+      formData.append('model', 'whisper-1');
+      formData.append('language', 'en');
 
-      // Call Whisper API
-      const transcription = await openai.audio.transcriptions.create({
-        file: file,
-        model: 'whisper-1',
-        language: 'en',
-      });
+      // Call Whisper API directly via fetch
+      // NOTE: API key is exposed here. For production, use a backend proxy.
+      const transcriptionResponse = await fetch(
+        'https://api.openai.com/v1/audio/transcriptions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+          },
+          body: formData,
+        }
+      );
 
-      return transcription.text;
+      if (!transcriptionResponse.ok) {
+        const error = await transcriptionResponse.json();
+        throw new Error(`Whisper API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await transcriptionResponse.json();
+      return data.text;
     } catch (error) {
       console.error('❌ Whisper transcription failed:', error);
       throw error;
@@ -190,29 +199,42 @@ class VoiceOSService {
    */
   private async generateKnowledgeResponse(query: string, context: string): Promise<string> {
     try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: `You are WeVysya Assistant, a helpful AI for the WeVysya community network.
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4-turbo-preview',
+          messages: [
+            {
+              role: 'system',
+              content: `You are WeVysya Assistant, a helpful AI for the WeVysya community network.
             
 Context from knowledge base:
 ${context}
 
 Answer questions based on this context. Be friendly, concise, and helpful.
 If the context doesn't contain the answer, say so politely and suggest what you can help with.`,
-          },
-          {
-            role: 'user',
-            content: query,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
+            },
+            {
+              role: 'user',
+              content: query,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        }),
       });
 
-      return completion.choices[0].message.content || 'I\'m not sure how to answer that.';
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`GPT API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content || 'I\'m not sure how to answer that.';
     } catch (error) {
       console.error('❌ GPT response generation failed:', error);
       throw error;
@@ -222,22 +244,35 @@ If the context doesn't contain the answer, say so politely and suggest what you 
   /**
    * 5️⃣ Text → Speech
    * Speak the AI response
+   * Returns a promise that resolves when speech finishes
    */
   async speak(text: string): Promise<void> {
-    try {
-      console.log('🔊 Speaking:', text);
-      
-      await Speech.speak(text, {
-        language: 'en-US',
-        pitch: 1.0,
-        rate: 0.9,
-        onDone: () => console.log('✅ Finished speaking'),
-        onStopped: () => console.log('🛑 Speech stopped'),
-        onError: (error) => console.error('❌ Speech error:', error),
-      });
-    } catch (error) {
-      console.error('❌ Text-to-speech failed:', error);
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        console.log('🔊 Speaking:', text);
+        
+        Speech.speak(text, {
+          language: 'en-US',
+          pitch: 1.0,
+          rate: 0.9,
+          onDone: () => {
+            console.log('✅ Finished speaking');
+            resolve();
+          },
+          onStopped: () => {
+            console.log('🛑 Speech stopped');
+            resolve();
+          },
+          onError: (error) => {
+            console.error('❌ Speech error:', error);
+            reject(error);
+          },
+        });
+      } catch (error) {
+        console.error('❌ Text-to-speech failed:', error);
+        reject(error);
+      }
+    });
   }
 
   stopSpeaking(): void {

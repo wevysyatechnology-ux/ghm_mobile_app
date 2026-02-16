@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Clipboard,
   Platform,
   Pressable,
   ScrollView,
@@ -46,9 +47,13 @@ export default function VoiceAssistantScreen() {
 
   const [initialized, setInitialized] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const animationLoopRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
 
   // Initialize voice OS and knowledge base
   useEffect(() => {
+    isMountedRef.current = true;
+    
     const initialize = async () => {
       try {
         console.log('🚀 Initializing WeVysya Voice OS...');
@@ -60,24 +65,44 @@ export default function VoiceAssistantScreen() {
         // Initialize voice OS
         voiceOS.activateWakeWord();
         
-        setInitialized(true);
+        if (isMountedRef.current) {
+          setInitialized(true);
+        }
       } catch (error) {
         console.error('❌ Initialization error:', error);
-        setState(prev => ({
-          ...prev,
-          status: 'error',
-          response: 'Failed to initialize Voice OS. Please check your API keys.',
-        }));
+        if (isMountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            status: 'error',
+            response: 'Failed to initialize Voice OS. Please check your API keys.',
+          }));
+        }
       }
     };
 
     initialize();
+
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+      voiceOS.deactivateWakeWord();
+      if (animationLoopRef.current) {
+        animationLoopRef.current.stop();
+        animationLoopRef.current = null;
+      }
+    };
   }, []);
 
   // Pulse animation when listening
   useEffect(() => {
     if (state.status === 'listening') {
-      Animated.loop(
+      // Stop any existing animation
+      if (animationLoopRef.current) {
+        animationLoopRef.current.stop();
+      }
+      
+      // Create and start new animation
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.2,
@@ -90,11 +115,26 @@ export default function VoiceAssistantScreen() {
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      animationLoopRef.current = loop;
+      loop.start();
     } else {
+      // Stop animation and reset value
+      if (animationLoopRef.current) {
+        animationLoopRef.current.stop();
+        animationLoopRef.current = null;
+      }
       pulseAnim.setValue(1);
     }
-  }, [state.status]);
+    
+    // Cleanup on unmount or status change
+    return () => {
+      if (animationLoopRef.current) {
+        animationLoopRef.current.stop();
+        animationLoopRef.current = null;
+      }
+    };
+  }, [state.status, pulseAnim]);
 
   /**
    * Handle mic press
@@ -139,13 +179,10 @@ export default function VoiceAssistantScreen() {
       const transcript = await voiceOS.stopRecordingAndTranscribe();
       setState(prev => ({ ...prev, transcript }));
 
-      // Process command
-      const command = await voiceOS.processCommand(transcript);
-
       // Get relevant context
       const context = await knowledgeService.searchKnowledge(transcript);
 
-      // Classify intent
+      // Classify intent (single source of truth)
       const intent = await actionEngine.classifyIntent(transcript, context);
 
       // Update state
@@ -182,9 +219,15 @@ export default function VoiceAssistantScreen() {
   /**
    * Copy transcript to clipboard
    */
-  const handleCopyTranscript = () => {
+  const handleCopyTranscript = async () => {
     if (state.transcript) {
-      Alert.alert('Copied', state.transcript);
+      try {
+        await Clipboard.setString(state.transcript);
+        Alert.alert('Copied', 'Transcript copied to clipboard');
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        Alert.alert('Error', 'Failed to copy transcript');
+      }
     }
   };
 
@@ -195,8 +238,10 @@ export default function VoiceAssistantScreen() {
     try {
       setState(prev => ({ ...prev, status: 'processing' }));
 
-      const command = await voiceOS.processCommand(text);
+      // Get relevant context
       const context = await knowledgeService.searchKnowledge(text);
+      
+      // Classify intent (single source of truth)
       const intent = await actionEngine.classifyIntent(text, context);
 
       setState(prev => ({
@@ -217,6 +262,11 @@ export default function VoiceAssistantScreen() {
       setState(prev => ({ ...prev, status: 'idle' }));
     } catch (error) {
       console.error('❌ Test error:', error);
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        response: 'Test failed. Please try again.',
+      }));
     }
   };
 

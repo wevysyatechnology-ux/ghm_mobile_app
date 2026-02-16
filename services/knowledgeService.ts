@@ -1,9 +1,9 @@
-import OpenAI from 'openai';
 import { supabase } from '@/lib/supabase';
 
-const openai = new OpenAI({
-  apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
-});
+/**
+ * NOTE: OpenAI API calls are made via fetch directly.
+ * For production, implement a backend proxy using server-side environment variables.
+ */
 
 export interface KnowledgeDocument {
   id: string;
@@ -71,6 +71,34 @@ class KnowledgeService {
       this.knowledgeCache.clear();
     } catch (error) {
       console.error('❌ Error adding document:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upsert document (insert or update if exists)
+   * Prevents duplicate entries by checking title and category
+   */
+  async upsertDocument(document: Omit<KnowledgeDocument, 'id' | 'embedding'>): Promise<void> {
+    try {
+      // Check if document already exists by title
+      const { data: existing } = await supabase
+        .from('knowledge_base')
+        .select('id')
+        .eq('metadata->>title', document.metadata.title)
+        .eq('metadata->>category', document.metadata.category)
+        .limit(1);
+
+      // If exists, skip insertion
+      if (existing && existing.length > 0) {
+        console.log('⏭️ Document already exists (skipping):', document.metadata.title);
+        return;
+      }
+
+      // Otherwise, add the document
+      await this.addDocument(document);
+    } catch (error) {
+      console.error('❌ Error upserting document:', error);
       throw error;
     }
   }
@@ -149,12 +177,25 @@ class KnowledgeService {
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: text,
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-ada-002',
+          input: text,
+        }),
       });
 
-      return response.data[0].embedding;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Embedding API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      return data.data[0].embedding;
     } catch (error) {
       console.error('❌ Embedding generation failed:', error);
       throw error;
@@ -163,20 +204,26 @@ class KnowledgeService {
 
   /**
    * Batch load knowledge documents
+   * Prevents duplicates by checking existing documents
    */
   async loadKnowledgeBase(documents: Array<Omit<KnowledgeDocument, 'id' | 'embedding'>>): Promise<void> {
     console.log(`📚 Loading ${documents.length} documents...`);
     
+    let loaded = 0;
+    let skipped = 0;
+    
     for (const doc of documents) {
       try {
-        await this.addDocument(doc);
-        console.log(`✅ Loaded: ${doc.metadata.title}`);
+        // Use upsert to prevent duplicates
+        await this.upsertDocument(doc);
+        loaded++;
       } catch (error) {
         console.error(`❌ Failed to load: ${doc.metadata.title}`, error);
+        skipped++;
       }
     }
     
-    console.log('✅ Knowledge base loaded');
+    console.log(`✅ Knowledge base loaded: ${loaded} added, ${skipped} skipped/failed`);
   }
 
   /**
