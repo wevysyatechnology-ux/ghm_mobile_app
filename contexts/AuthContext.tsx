@@ -26,15 +26,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [virtualMembership, setVirtualMembership] = useState<VirtualMembership | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  console.log('AuthProvider initialized');
+  console.log('🔐 AuthProvider initialized');
 
   const isProfileComplete = Boolean(
-    profile &&
-      profile.full_name &&
-      profile.business_category &&
-      profile.country &&
-      profile.state &&
-      profile.city
+    profile && profile.full_name && profile.full_name.trim().length > 0
   );
 
   console.log('AuthContext - isProfileComplete:', isProfileComplete, 'profile:', {
@@ -48,19 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserData = async (uid: string) => {
     try {
-      console.log('AuthContext - loadUserData for uid:', uid);
+      console.log('🔄 AuthContext - loadUserData for uid:', uid);
       const userProfile = await authService.getUserProfile(uid);
-      console.log('AuthContext - loaded profile:', userProfile);
+      console.log('🔄 AuthContext - loaded profile:', userProfile);
       setProfile(userProfile);
 
       if (userProfile) {
         const membershipInfo = await authService.getMembershipInfo(uid);
-        console.log('AuthContext - membership info:', membershipInfo);
+        console.log('🔄 AuthContext - membership info:', membershipInfo);
         setCoreMembership(membershipInfo.coreMembership);
         setVirtualMembership(membershipInfo.virtualMembership);
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ Error loading user data:', error);
     }
   };
 
@@ -71,11 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await authService.signOut();
-    setUserId(null);
-    setProfile(null);
-    setCoreMembership(null);
-    setVirtualMembership(null);
+    try {
+      await authService.signOut();
+      setUser(null);
+      setUserId(null);
+      setProfile(null);
+      setCoreMembership(null);
+      setVirtualMembership(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   useEffect(() => {

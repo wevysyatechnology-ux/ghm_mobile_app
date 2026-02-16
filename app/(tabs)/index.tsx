@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight } from 'lucide-react-native';
@@ -9,14 +9,18 @@ import FloatingLogo from '@/components/shared/FloatingLogo';
 import AIInputBar from '@/components/ai/AIInputBar';
 import FloatingVoiceButton from '@/components/ai/FloatingVoiceButton';
 import SmartPromptChips from '@/components/ai/SmartPromptChips';
+import AIResponseToast from '@/components/ai/AIResponseToast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/contexts/AIContext';
 import { AIService } from '@/services/aiService';
+import { speechService } from '@/services/speechService';
 
 export default function Home() {
   const { profile } = useAuth();
   const { processIntent } = useAI();
   const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -33,31 +37,62 @@ export default function Home() {
   };
 
   const handlePromptPress = async (prompt: string) => {
-    setOrbState('listening');
-    setTimeout(() => setOrbState('thinking'), 500);
+    setOrbState('thinking');
 
     const intent = await AIService.processPrompt(prompt);
 
-    setTimeout(() => {
-      setOrbState('responding');
-      processIntent(intent);
-    }, 1500);
+    setOrbState('responding');
+    processIntent(intent);
+    
+    // Show and speak the response
+    if (intent.message) {
+      setToastMessage(intent.message);
+      setShowToast(true);
+      
+      if (intent.shouldSpeak) {
+        await AIService.speakResponse(intent.message);
+      }
+    }
 
-    setTimeout(() => setOrbState('idle'), 3000);
+    setTimeout(() => setOrbState('idle'), 2000);
   };
 
   const handleMicPress = async () => {
     setOrbState('listening');
-    setTimeout(() => setOrbState('thinking'), 500);
 
-    const intent = await AIService.processVoiceInput(null);
-
-    setTimeout(() => {
-      setOrbState('responding');
-      processIntent(intent);
-    }, 1500);
-
-    setTimeout(() => setOrbState('idle'), 3000);
+    try {
+      await speechService.startListening(
+        async (transcript) => {
+          // Got speech input
+          setOrbState('thinking');
+          
+          const intent = await AIService.processVoiceInput(transcript);
+          
+          setOrbState('responding');
+          processIntent(intent);
+          
+          // Show and speak the response
+          if (intent.message) {
+            setToastMessage(intent.message);
+            setShowToast(true);
+            
+            if (intent.shouldSpeak) {
+              await AIService.speakResponse(intent.message);
+            }
+          }
+          
+          setTimeout(() => setOrbState('idle'), 2000);
+        },
+        (error) => {
+          // Error occurred
+          setOrbState('idle');
+          Alert.alert('Voice Input Error', error);
+        }
+      );
+    } catch (error) {
+      setOrbState('idle');
+      Alert.alert('Voice Input', 'Speech recognition is not available. Please use text input instead.');
+    }
   };
 
   const handleTextSubmit = async (text: string) => {
@@ -65,12 +100,20 @@ export default function Home() {
 
     const intent = await AIService.processTextInput(text);
 
-    setTimeout(() => {
-      setOrbState('responding');
-      processIntent(intent);
-    }, 1000);
+    setOrbState('responding');
+    processIntent(intent);
+    
+    // Show and speak the response
+    if (intent.message) {
+      setToastMessage(intent.message);
+      setShowToast(true);
+      
+      if (intent.shouldSpeak) {
+        await AIService.speakResponse(intent.message);
+      }
+    }
 
-    setTimeout(() => setOrbState('idle'), 2500);
+    setTimeout(() => setOrbState('idle'), 2000);
   };
 
   return (
@@ -181,6 +224,12 @@ export default function Home() {
       <FloatingVoiceButton
         onPress={handleMicPress}
         isActive={orbState === 'listening'}
+      />
+      <AIResponseToast
+        message={toastMessage}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+        duration={3000}
       />
     </View>
   );

@@ -36,7 +36,7 @@ export default function ProfileSetupScreen() {
       setState(profile.state || '');
       setCity(profile.city || '');
       setBusinessCategory(profile.business_category || '');
-      setVerticalType(profile.vertical_type || null);
+      setVerticalType(profile.vertical_type || 'open_circle');
     }
   }, [profile]);
 

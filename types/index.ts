@@ -22,7 +22,8 @@ export interface Activity {
 
 export interface AIIntent {
   intent: string;
-  screen_to_open?: string;
+  screen_to_open?: string | null;
   message?: string;
   data?: Record<string, any>;
+  shouldSpeak?: boolean;
 }

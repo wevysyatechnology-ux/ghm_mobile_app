@@ -17,8 +17,13 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const processIntent = (intent: AIIntent) => {
     setCurrentIntent(intent);
 
-    if (intent.screen_to_open) {
-      router.push(intent.screen_to_open as any);
+    // Navigate to screen if specified
+    if (intent.screen_to_open && intent.screen_to_open !== null) {
+      try {
+        router.push(intent.screen_to_open as any);
+      } catch (error) {
+        console.error('Navigation error:', error);
+      }
     }
   };
 

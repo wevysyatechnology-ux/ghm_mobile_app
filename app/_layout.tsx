@@ -6,12 +6,17 @@ import { AIProvider } from '@/contexts/AIContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export default function RootLayout() {
-  console.log('📱 RootLayout initializing...');
-  
   useFrameworkReady();
-  
+
   useEffect(() => {
-    console.log('✅ RootLayout mounted successfully');
+    console.log('📱 App _layout.tsx mounted');
+    return () => {
+      console.log('📱 App _layout.tsx unmounting');
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('✅ App initialized and ready');
   }, []);
 
   return (

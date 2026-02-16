@@ -4,18 +4,12 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-console.log('🔧 Supabase Initialization:');
-console.log(`  URL: ${supabaseUrl ? '✓ Found' : '✗ Missing'}`);
-console.log(`  Key: ${supabaseAnonKey ? '✓ Found' : '✗ Missing'}`);
-
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    '❌ Missing Supabase environment variables. Please check your .env file.\n' +
-    `URL: ${supabaseUrl ? 'Found' : 'Missing'}\n` +
-    `Key: ${supabaseAnonKey ? 'Found' : 'Missing'}`
-  );
-  
-  // Create a disabled client for debugging
+  console.error('🔴 Supabase Configuration Error:');
+  console.error(`📍 URL: ${supabaseUrl ? '✅ Found' : '❌ Missing'}`);
+  console.error(`🔑 Key: ${supabaseAnonKey ? '✅ Found' : '❌ Missing'}`);
+  console.error('💡 Check EAS build configuration or .env file');
+
   throw new Error(
     'Missing Supabase environment variables. Please check your .env file.\n' +
     `URL: ${supabaseUrl ? 'Found' : 'Missing'}\n` +
