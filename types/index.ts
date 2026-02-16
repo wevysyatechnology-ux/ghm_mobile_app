@@ -27,3 +27,23 @@ export interface AIIntent {
   data?: Record<string, any>;
   shouldSpeak?: boolean;
 }
+
+export interface VoiceCommand {
+  transcript: string;
+  intent: string;
+  action?: any;
+  response: string;
+  shouldExecute: boolean;
+}
+
+export interface Intent {
+  type: 'knowledge' | 'action';
+  category?: string;
+  action?: {
+    name: string;
+    parameters: Record<string, any>;
+    screen?: string;
+  };
+  response: string;
+  confidence: number;
+}
