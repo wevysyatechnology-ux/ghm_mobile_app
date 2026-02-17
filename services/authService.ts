@@ -260,20 +260,77 @@ export const authService = {
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
       console.log('getUserProfile - fetching profile for userId:', userId);
-      const { data, error } = await supabase
+      
+      // Fetch from users_profile table
+      const { data: userProfileData, error: profileError } = await supabase
         .from('users_profile')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      console.log('getUserProfile - result:', { data, error });
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
         return null;
       }
 
-      return data;
+      if (!userProfileData) {
+        return null;
+      }
+
+      // Fetch from profiles table to get house_id, zone, business, and full_name
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('house_id, zone, business, full_name')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profilesError) {
+        console.log('Note: profiles table query error (may not exist):', profilesError);
+      }
+
+      // If we have house_id, fetch house details from houses table
+      let houseData = null;
+      let houseZone = null;
+      if (profilesData?.house_id) {
+        const { data: house } = await supabase
+          .from('houses')
+          .select('id, name, state, zone')
+          .eq('id', profilesData.house_id)
+          .maybeSingle();
+        
+        if (house) {
+          houseZone = house.zone;
+          // Map houses table structure to match CoreHouse interface
+          houseData = {
+            id: house.id,
+            house_name: house.name,
+            city: house.zone || '',
+            state: house.state || '',
+            country: '',
+            created_at: '',
+          };
+        }
+      }
+
+      console.log('getUserProfile - users_profile:', userProfileData);
+      console.log('getUserProfile - profiles:', profilesData);
+      console.log('getUserProfile - house:', houseData);
+
+      // Merge the data - use full_name from profiles table if users_profile.full_name is empty
+      const fullName = (userProfileData.full_name && userProfileData.full_name.trim()) 
+        ? userProfileData.full_name 
+        : (profilesData?.full_name || userProfileData.full_name);
+
+      const mergedProfile: UserProfile = {
+        ...userProfileData,
+        full_name: fullName,
+        house_id: profilesData?.house_id || null,
+        zone: houseZone || profilesData?.zone || null,
+        business: profilesData?.business || null,
+        house: houseData || null,
+      };
+
+      return mergedProfile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;

@@ -47,15 +47,30 @@ export default function LinksForm() {
   const loadHouseMembers = async () => {
     if (!selectedHouse) return;
     try {
+      console.log('Loading members for house:', selectedHouse.house_name || selectedHouse.id);
       const members = await LinksService.getHouseMembers(selectedHouse.id);
+      console.log('Loaded members:', members.length);
       setHouseMembers(members);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load members');
+      
+      if (members.length === 0) {
+        Alert.alert(
+          'No Members Found',
+          'There are no other members in this house to send a link to.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
+      console.error('Error loading house members:', error);
+      Alert.alert('Error', `Failed to load members: ${error.message || 'Unknown error'}`);
     }
   };
 
   const handleSubmit = async () => {
-    if (!selectedMember || !selectedHouse) {
+    console.log('Submit button clicked');
+    console.log('Selected member:', selectedMember);
+    console.log('Form data:', formData);
+
+    if (!selectedMember) {
       Alert.alert('Error', 'Please select a house member');
       return;
     }
@@ -66,9 +81,9 @@ export default function LinksForm() {
     }
 
     try {
-      await LinksService.createLink({
+      console.log('Creating link...');
+      const result = await LinksService.createLink({
         to_user_id: selectedMember.id,
-        house_id: selectedHouse.id,
         title: formData.title,
         description: formData.description,
         contact_name: formData.contact_name,
@@ -76,18 +91,35 @@ export default function LinksForm() {
         contact_email: formData.contact_email,
         urgency: formData.urgency,
       });
+      console.log('Link created successfully:', result);
 
-      Alert.alert('Success', 'Link sent successfully');
-      router.back();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create link');
+      // Clear form
+      setFormData({
+        title: '',
+        description: '',
+        contact_name: '',
+        contact_phone: '',
+        contact_email: '',
+        urgency: 1,
+      });
+      setSelectedMember(null);
+
+      Alert.alert('Success', 'Link sent successfully', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(tabs)'),
+        },
+      ]);
+    } catch (error: any) {
+      console.error('Error creating link:', error);
+      Alert.alert('Error', `Failed to create link: ${error.message || 'Unknown error'}`);
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Links Form</Text>
@@ -107,22 +139,30 @@ export default function LinksForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <View style={styles.memberList}>
-            {houseMembers.map((member) => (
-              <TouchableOpacity
-                key={member.id}
-                style={styles.memberItem}
-                onPress={() => {
-                  setSelectedMember(member);
-                  setShowMemberPicker(false);
-                }}>
-                <Text style={styles.memberName}>{member.full_name}</Text>
-                <Text style={styles.memberDetails}>
-                  {member.business_category} • {member.city}
+          <ScrollView style={styles.memberList}>
+            {houseMembers.length === 0 ? (
+              <View style={styles.emptyMemberList}>
+                <Text style={styles.emptyMemberText}>
+                  No other members found in this house
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              </View>
+            ) : (
+              houseMembers.map((member) => (
+                <TouchableOpacity
+                  key={member.id}
+                  style={styles.memberItem}
+                  onPress={() => {
+                    setSelectedMember(member);
+                    setShowMemberPicker(false);
+                  }}>
+                  <Text style={styles.memberName}>{member.full_name}</Text>
+                  <Text style={styles.memberDetails}>
+                    {member.business_category} • {member.city}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
         )}
 
         <Text style={styles.label}>
@@ -328,5 +368,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text_primary,
+  },
+  emptyMemberList: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyMemberText: {
+    fontSize: 14,
+    color: colors.text_tertiary,
+    textAlign: 'center',
   },
 });

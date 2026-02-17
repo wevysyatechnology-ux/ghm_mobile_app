@@ -71,20 +71,32 @@ export default function DealsForm() {
         description: formData.description,
         amount: parseFloat(formData.amount),
         deal_type: isWeVysyaDeal ? 'wevysya_deal' : 'house_deal',
-        house_id: isWeVysyaDeal ? undefined : selectedHouse?.id,
       });
 
-      Alert.alert('Success', 'Deal created successfully');
-      router.back();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create deal');
+      // Clear form
+      setFormData({
+        title: '',
+        description: '',
+        amount: '',
+      });
+      setSelectedMember(null);
+
+      Alert.alert('Success', 'Deal created successfully', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(tabs)'),
+        },
+      ]);
+    } catch (error: any) {
+      console.error('Error creating deal:', error);
+      Alert.alert('Error', `Failed to create deal: ${error.message || 'Unknown error'}`);
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Deal</Text>
@@ -104,7 +116,7 @@ export default function DealsForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <View style={styles.memberList}>
+          <ScrollView style={styles.memberList}>
             {houseMembers.map((member) => (
               <TouchableOpacity
                 key={member.id}
@@ -128,7 +140,7 @@ export default function DealsForm() {
               <Text style={styles.memberName}>WeVysya</Text>
               <Text style={styles.memberDetails}>Open to all WeVysya members</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
 
         <Text style={styles.label}>

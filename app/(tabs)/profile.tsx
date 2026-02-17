@@ -47,14 +47,25 @@ export default function Profile() {
   const circleType: 'inner' | 'open' = profile?.vertical_type === 'inner_circle' ? 'inner' : 'open';
   const tierType: 'privileged' | 'virtual' | 'regular' = coreMembership ? 'privileged' : virtualMembership ? 'virtual' : 'regular';
 
+  // Get house and zone information
+  const houseName = profile?.house?.house_name;
+  const zoneName = profile?.zone;
+  
+  // Category line: show house name if available, otherwise business category
+  const categoryText = houseName || profile?.business_category || profile?.business || 'Not set';
+  
+  // Location line: show zone if available, otherwise location
+  const locationText = zoneName || 
+    [profile?.city, profile?.state, profile?.country]
+      .filter(Boolean)
+      .join(', ') || 'Not set';
+
   const userData = {
     id: profile?.id || '',
     name: profile?.full_name || 'User',
     email: user?.email || '',
-    category: profile?.business_category || 'Not set',
-    location: [profile?.city, profile?.state, profile?.country]
-      .filter(Boolean)
-      .join(', ') || 'Not set',
+    category: categoryText,
+    location: locationText,
     circle: circleType,
     tier: tierType,
     profile_photo: undefined,

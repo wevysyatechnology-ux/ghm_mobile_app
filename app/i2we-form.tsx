@@ -61,7 +61,7 @@ export default function I2WEForm() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedMember || !selectedHouse) {
+    if (!selectedMember) {
       Alert.alert('Error', 'Please select a house member');
       return;
     }
@@ -74,13 +74,23 @@ export default function I2WEForm() {
     try {
       await I2WEService.createMeeting({
         member_2_id: selectedMember.id,
-        house_id: selectedHouse.id,
         meeting_date: formData.meeting_date,
         notes: formData.notes,
       });
 
-      Alert.alert('Success', 'Meeting scheduled successfully');
-      router.back();
+      // Clear form
+      setFormData({
+        meeting_date: '',
+        notes: '',
+      });
+      setSelectedMember(null);
+
+      Alert.alert('Success', 'Meeting scheduled successfully', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(tabs)'),
+        },
+      ]);
     } catch (error) {
       Alert.alert('Error', 'Failed to schedule meeting');
     }
@@ -89,7 +99,7 @@ export default function I2WEForm() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Schedule I2WE Meeting</Text>
@@ -116,7 +126,7 @@ export default function I2WEForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <View style={styles.memberList}>
+          <ScrollView style={styles.memberList}>
             {houseMembers.map((member) => (
               <TouchableOpacity
                 key={member.id}
@@ -131,7 +141,7 @@ export default function I2WEForm() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         <Text style={styles.label}>

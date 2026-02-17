@@ -8,6 +8,7 @@ The mobile app client-side code now calls these backend endpoints instead of dir
 - `POST /functions/v1/embeddings` - Generate embeddings for knowledge base search
 - `POST /functions/v1/transcribe` - Transcribe audio to text via Whisper
 - `POST /functions/v1/classify-intent` - Classify user intent and extract action parameters
+- `POST /functions/v1/send-notification` - Send push notifications to users (uses Expo Push API)
 
 These are Supabase Edge Functions that securely proxy OpenAI API calls using a server-side API key.
 
@@ -34,6 +35,9 @@ supabase functions deploy transcribe
 
 # Deploy classify-intent function
 supabase functions deploy classify-intent
+
+# Deploy send-notification function
+supabase functions deploy send-notification
 ```
 
 Verify deployment:

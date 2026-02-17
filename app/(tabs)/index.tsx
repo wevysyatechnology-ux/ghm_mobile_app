@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight } from 'lucide-react-native';
+import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import AnimatedBackground from '@/components/shared/AnimatedBackground';
 import GradientText from '@/components/shared/GradientText';
@@ -14,6 +14,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/contexts/AIContext';
 import { AIService } from '@/services/aiService';
 import { speechService } from '@/services/speechService';
+import { LinksService } from '@/services/linksService';
+import { DealsService } from '@/services/dealsService';
+import { I2WEService } from '@/services/i2weService';
 
 export default function Home() {
   const { profile } = useAuth();
@@ -21,6 +24,32 @@ export default function Home() {
   const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [linksGivenCount, setLinksGivenCount] = useState(0);
+  const [linksReceivedCount, setLinksReceivedCount] = useState(0);
+  const [closedDealsCount, setClosedDealsCount] = useState(0);
+  const [meetingsCount, setMeetingsCount] = useState(0);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const [linksGiven, linksReceived, closedDeals, meetings] = await Promise.all([
+        LinksService.getLinksGivenCount(),
+        LinksService.getLinksReceivedCount(),
+        DealsService.getClosedDealsCount(),
+        I2WEService.getMeetingsCount(),
+      ]);
+
+      setLinksGivenCount(linksGiven);
+      setLinksReceivedCount(linksReceived);
+      setClosedDealsCount(closedDeals);
+      setMeetingsCount(meetings);
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -175,23 +204,30 @@ export default function Home() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={styles.statIconContainer}>
-              <TrendingUp size={20} color={colors.accent_green_bright} />
+              <Send size={20} color={colors.accent_green_bright} />
             </View>
-            <Text style={styles.statValue}>0</Text>
-            <Text style={styles.statLabel}>Active Links</Text>
+            <Text style={styles.statValue}>{linksGivenCount}</Text>
+            <Text style={styles.statLabel}>Links Given</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Inbox size={20} color={colors.accent_green_bright} />
+            </View>
+            <Text style={styles.statValue}>{linksReceivedCount}</Text>
+            <Text style={styles.statLabel}>Links Received</Text>
           </View>
           <View style={styles.statCard}>
             <View style={styles.statIconContainer}>
               <Handshake size={20} color={colors.accent_green_bright} />
             </View>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{closedDealsCount}</Text>
             <Text style={styles.statLabel}>Closed Deals</Text>
           </View>
           <View style={styles.statCard}>
             <View style={styles.statIconContainer}>
               <Calendar size={20} color={colors.accent_green_bright} />
             </View>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{meetingsCount}</Text>
             <Text style={styles.statLabel}>Meetings</Text>
           </View>
         </View>
@@ -298,12 +334,13 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xxl,
     gap: spacing.md,
   },
   statCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: colors.bg_secondary,
     borderRadius: 16,
     padding: spacing.lg,

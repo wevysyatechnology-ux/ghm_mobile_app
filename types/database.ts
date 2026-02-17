@@ -13,6 +13,10 @@ export interface UserProfile {
   state: string | null;
   city: string | null;
   business_category: string | null;
+  house_id?: string | null;
+  zone?: string | null;
+  business?: string | null;
+  house?: CoreHouse | null;
   attendance_status: AttendanceStatus;
   absence_count: number;
   is_suspended: boolean;
