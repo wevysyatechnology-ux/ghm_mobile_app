@@ -15,50 +15,78 @@ export const LinksService = {
   async getHouseMembers(houseId: string): Promise<UserProfile[]> {
     // Get current user to exclude them from the list
     const { data: userData } = await supabase.auth.getUser();
-    
-    // Query profiles table to get all users with matching house_id and full_name
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('house_id', houseId)
-      .neq('id', userData?.user?.id || ''); // Exclude current user
+    const currentUserId = userData?.user?.id;
 
-    if (profilesError) {
-      console.error('Error fetching profiles with house_id:', profilesError);
-      throw profilesError;
+    try {
+      // Query profiles table directly for house members with their profile data
+      console.log('Fetching profiles for house_id:', houseId, 'currentUserId:', currentUserId);
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          zone
+        `)
+        .eq('house_id', houseId);
+
+      if (profilesError) {
+        console.error('Error fetching profiles with house_id:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Profiles found:', profilesData?.length || 0, 'profiles:', profilesData);
+
+      if (!profilesData || profilesData.length === 0) {
+        console.log('No members found for house:', houseId);
+        return [];
+      }
+
+      // Filter out current user and get their IDs
+      const otherMembers = profilesData.filter((p: any) => p.id !== currentUserId);
+      const userIds = otherMembers.map((p: any) => p.id);
+
+      console.log('User IDs after filtering current user:', userIds);
+
+      if (userIds.length === 0) {
+        console.log('No other members in house after filtering current user');
+        return [];
+      }
+
+      // Fetch additional details from users_profile table if available
+      const { data: userProfiles } = await supabase
+        .from('users_profile')
+        .select('id, full_name, phone_number, business_category, city')
+        .in('id', userIds);
+
+      console.log('User profiles found in users_profile:', userProfiles?.length || 0);
+
+      // Create a map of users_profile data
+      const profileMap = new Map((userProfiles || []).map((p: any) => [p.id, p]));
+
+      // Merge data from both tables, preferring users_profile when available
+      const mergedProfiles = otherMembers.map((profile: any) => {
+        const userProfile = profileMap.get(profile.id);
+        return {
+          id: profile.id,
+          full_name: userProfile?.full_name || profile.full_name || 'Unknown',
+          phone_number: userProfile?.phone_number || null,
+          business_category: userProfile?.business_category || '',
+          city: userProfile?.city || profile.zone || '',
+        };
+      });
+
+      // Sort by full_name
+      const sortedProfiles = mergedProfiles.sort((a, b) => 
+        (a.full_name || '').localeCompare(b.full_name || '')
+      );
+
+      console.log(`Loaded ${sortedProfiles.length} members for house ${houseId}`, sortedProfiles);
+      return sortedProfiles;
+    } catch (error) {
+      console.error('Error in getHouseMembers:', error);
+      throw error;
     }
-
-    if (!profilesData || profilesData.length === 0) {
-      return [];
-    }
-
-    // Extract user IDs and create a map of profile full_names
-    const userIds = profilesData.map((p: any) => p.id);
-    const profileFullNames = new Map(profilesData.map((p: any) => [p.id, p.full_name]));
-
-    // Fetch user details from users_profile table
-    const { data: userProfiles, error: userProfilesError } = await supabase
-      .from('users_profile')
-      .select('id, full_name, phone_number, business_category, city')
-      .in('id', userIds);
-
-    if (userProfilesError) {
-      console.error('Error fetching user profiles:', userProfilesError);
-      throw userProfilesError;
-    }
-
-    // Merge and use profile full_name as fallback
-    const mergedProfiles = (userProfiles || []).map((profile: any) => ({
-      ...profile,
-      full_name: (profile.full_name && profile.full_name.trim()) 
-        ? profile.full_name 
-        : (profileFullNames.get(profile.id) || profile.full_name || 'Unknown')
-    }));
-
-    // Sort by full_name
-    mergedProfiles.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
-
-    return mergedProfiles;
   },
 
   async createLink(linkData: CreateLinkData): Promise<CoreLink> {

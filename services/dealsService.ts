@@ -17,7 +17,7 @@ export const DealsService = {
       console.log('Creating deal for user:', userData.user.id);
       console.log('Deal data:', dealData);
 
-      // Get authenticated user's house_id from profiles
+      // Get authenticated user's house_id from profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('house_id')

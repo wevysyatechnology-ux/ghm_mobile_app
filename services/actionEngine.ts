@@ -230,17 +230,16 @@ class ActionEngine {
   private async searchMembers(params: any): Promise<any> {
     try {
       let query = supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'member')
+        .from('users_profile')
+        .select('id, full_name, business_category, city, phone_number')
         .limit(20);
 
       if (params.profession) {
-        query = query.ilike('industry', `%${params.profession}%`);
+        query = query.ilike('business_category', `%${params.profession}%`);
       }
 
       if (params.location) {
-        query = query.ilike('location', `%${params.location}%`);
+        query = query.ilike('city', `%${params.location}%`);
       }
 
       const { data, error } = await query;
