@@ -227,21 +227,26 @@ export const LinksService = {
   async getLinksGivenCount(): Promise<number> {
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return 0;
+      if (!userData.user) {
+        console.warn('⚠️ No authenticated user for getLinksGivenCount');
+        return 0;
+      }
 
+      console.log('📊 Fetching links given count for user:', userData.user.id);
       const { count, error } = await supabase
         .from('core_links')
         .select('*', { count: 'exact', head: true })
         .eq('from_user_id', userData.user.id);
 
       if (error) {
-        console.error('Error fetching links given count:', error);
+        console.error('❌ Error fetching links given count:', error);
         return 0;
       }
 
+      console.log('✅ Links given count:', count);
       return count || 0;
     } catch (error) {
-      console.error('LinksService.getLinksGivenCount - exception:', error);
+      console.error('❌ LinksService.getLinksGivenCount - exception:', error);
       return 0;
     }
   },
@@ -249,22 +254,27 @@ export const LinksService = {
   async getLinksReceivedCount(): Promise<number> {
     try {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return 0;
+      if (!userData.user) {
+        console.warn('⚠️ No authenticated user for getLinksReceivedCount');
+        return 0;
+      }
 
+      console.log('📊 Fetching links received count for user:', userData.user.id);
       const { count, error } = await supabase
         .from('core_links')
         .select('*', { count: 'exact', head: true })
         .eq('to_user_id', userData.user.id);
 
       if (error) {
-        console.error('Error fetching links received count:', error);
+        console.error('❌ Error fetching links received count:', error);
         return 0;
       }
 
+      console.log('✅ Links received count:', count);
       return count || 0;
     } catch (error) {
-      console.error('LinksService.getLinksReceivedCount - exception:', error);
+      console.error('❌ LinksService.getLinksReceivedCount - exception:', error);
       return 0;
     }
-  },
+  }
 };
