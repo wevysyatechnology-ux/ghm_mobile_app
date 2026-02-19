@@ -6,8 +6,11 @@ import { colors, spacing } from '@/constants/theme';
 import { DealsService } from '@/services/dealsService';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
+import { sendDealRecordedNotification } from '@/utils/notificationHelpers';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DealsForm() {
+  const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | { id: 'wevysya', full_name: 'WeVysya' } | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -66,12 +69,25 @@ export default function DealsForm() {
     const isWeVysyaDeal = selectedMember.id === 'wevysya';
 
     try {
-      await DealsService.createDeal({
+      const result = await DealsService.createDeal({
         title: formData.title,
         description: formData.description,
         amount: parseFloat(formData.amount),
         deal_type: isWeVysyaDeal ? 'wevysya_deal' : 'house_deal',
       });
+
+      // Send notification to the member (if not WeVysya deal)
+      if (!isWeVysyaDeal && selectedMember.id && profile) {
+        await sendDealRecordedNotification({
+          recipientId: selectedMember.id,
+          dealId: result?.id || '',
+          memberName: profile.full_name || 'A member',
+          memberId: profile.id,
+          amount: parseFloat(formData.amount),
+          currency: '₹',
+          dealType: 'house_deal',
+        });
+      }
 
       // Clear form
       setFormData({

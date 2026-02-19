@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox } from 'lucide-react-native';
@@ -17,6 +17,9 @@ import { speechService } from '@/services/speechService';
 import { LinksService } from '@/services/linksService';
 import { DealsService } from '@/services/dealsService';
 import { I2WEService } from '@/services/i2weService';
+import { voiceOS } from '@/services/voiceOSService';
+import { actionEngine } from '@/services/actionEngine';
+import { knowledgeService } from '@/services/knowledgeService';
 
 export default function Home() {
   const { profile } = useAuth();
@@ -66,83 +69,183 @@ export default function Home() {
   };
 
   const handlePromptPress = async (prompt: string) => {
-    setOrbState('thinking');
+    try {
+      setOrbState('thinking');
+      console.log('💡 Processing prompt:', prompt);
 
-    const intent = await AIService.processPrompt(prompt);
+      // Use Voice OS pipeline for consistent AI processing
+      let context = '';
+      try {
+        context = await knowledgeService.searchKnowledge(prompt);
+      } catch (error) {
+        console.log('⚠️ Knowledge search failed, continuing without context');
+        context = 'WeVysya is a business community network.';
+      }
 
-    setOrbState('responding');
-    processIntent(intent);
-    
-    // Show and speak the response
-    if (intent.message) {
-      setToastMessage(intent.message);
+      const intent = await actionEngine.classifyIntent(prompt, context);
+      console.log('🎯 Intent:', intent.type, intent.category);
+
+      setOrbState('responding');
+
+      // Show and speak the response
+      setToastMessage(intent.response);
       setShowToast(true);
       
-      if (intent.shouldSpeak) {
-        await AIService.speakResponse(intent.message);
+      try {
+        await voiceOS.speak(intent.response);
+      } catch (speakError) {
+        console.log('⚠️ Text-to-speech failed');
       }
-    }
 
-    setTimeout(() => setOrbState('idle'), 2000);
+      // Execute action if needed
+      if (intent.type === 'action' && intent.action?.screen) {
+        setTimeout(() => {
+          router.push(intent.action!.screen as any);
+        }, 1500);
+      }
+
+      setTimeout(() => setOrbState('idle'), 2000);
+    } catch (error) {
+      console.error('❌ Prompt processing error:', error);
+      setOrbState('idle');
+      setToastMessage('Sorry, I couldn\'t process that. Please check your connection.');
+      setShowToast(true);
+    }
   };
 
   const handleMicPress = async () => {
-    setOrbState('listening');
+    // Check if running on web - voice recording has limited support
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Voice Input Not Available on Web',
+        'Voice recording works best on mobile devices. Please use the text input instead, or test on a physical device/simulator.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     try {
-      await speechService.startListening(
-        async (transcript) => {
-          // Got speech input
+      setOrbState('listening');
+      console.log('🎤 Starting voice recording...');
+
+      // Start recording
+      await voiceOS.startRecording();
+      console.log('✅ Recording started');
+
+      // Auto-stop after 5 seconds (or implement manual stop button)
+      setTimeout(async () => {
+        try {
           setOrbState('thinking');
+          console.log('🛑 Stopping recording...');
+
+          // Transcribe audio using Whisper
+          const transcript = await voiceOS.stopRecordingAndTranscribe();
+          console.log('📝 Transcribed:', transcript);
           
-          const intent = await AIService.processVoiceInput(transcript);
-          
-          setOrbState('responding');
-          processIntent(intent);
-          
-          // Show and speak the response
-          if (intent.message) {
-            setToastMessage(intent.message);
-            setShowToast(true);
-            
-            if (intent.shouldSpeak) {
-              await AIService.speakResponse(intent.message);
-            }
+          if (!transcript || transcript.trim().length === 0) {
+            throw new Error('No speech detected');
           }
+
+          // Get context and classify intent
+          let context = '';
+          try {
+            context = await knowledgeService.searchKnowledge(transcript);
+            console.log('📚 Context retrieved');
+          } catch (error) {
+            console.log('⚠️ Context search failed, using default');
+            context = 'WeVysya is a business community network.';
+          }
+
+          const intent = await actionEngine.classifyIntent(transcript, context);
+          console.log('🎯 Intent:', intent.type, intent.category);
+
+          setOrbState('responding');
+
+          // Show and speak the response
+          setToastMessage(intent.response);
+          setShowToast(true);
           
+          try {
+            await voiceOS.speak(intent.response);
+          } catch (speakError) {
+            console.log('⚠️ Text-to-speech failed');
+          }
+
+          // Execute action if needed
+          if (intent.type === 'action' && intent.action?.screen) {
+            setTimeout(() => {
+              router.push(intent.action!.screen as any);
+            }, 1500);
+          }
+
           setTimeout(() => setOrbState('idle'), 2000);
-        },
-        (error) => {
-          // Error occurred
+        } catch (error) {
+          console.error('❌ Voice processing error:', error);
           setOrbState('idle');
-          Alert.alert('Voice Input Error', error);
+          
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          setToastMessage(`Voice processing failed: ${errorMessage}. Please try text input instead.`);
+          setShowToast(true);
         }
-      );
+      }, 5000); // Stop recording after 5 seconds
+
     } catch (error) {
+      console.error('❌ Microphone error:', error);
       setOrbState('idle');
-      Alert.alert('Voice Input', 'Speech recognition is not available. Please use text input instead.');
+      setToastMessage('Could not access microphone. Please check permissions and try again.');
+      setShowToast(true);
     }
   };
 
   const handleTextSubmit = async (text: string) => {
-    setOrbState('thinking');
+    try {
+      setOrbState('thinking');
+      console.log('💬 Processing text input:', text);
 
-    const intent = await AIService.processTextInput(text);
-
-    setOrbState('responding');
-    processIntent(intent);
-    
-    // Show and speak the response
-    if (intent.message) {
-      setToastMessage(intent.message);
-      setShowToast(true);
-      
-      if (intent.shouldSpeak) {
-        await AIService.speakResponse(intent.message);
+      // Use Voice OS pipeline for proper AI processing
+      let context = '';
+      try {
+        // Step 1: Search knowledge base for context (RAG)
+        context = await knowledgeService.searchKnowledge(text);
+        console.log('📚 Knowledge context retrieved');
+      } catch (error) {
+        console.log('⚠️ Knowledge search failed, continuing without context:', error);
+        context = 'WeVysya is a business community network.';
       }
-    }
 
-    setTimeout(() => setOrbState('idle'), 2000);
+      // Step 2: Classify intent using OpenAI via classify-intent function
+      const intent = await actionEngine.classifyIntent(text, context);
+      console.log('🎯 Intent classified:', intent.type, intent.category);
+
+      setOrbState('responding');
+
+      // Show the response
+      setToastMessage(intent.response);
+      setShowToast(true);
+
+      // Speak the response
+      try {
+        await voiceOS.speak(intent.response);
+      } catch (speakError) {
+        console.log('⚠️ Text-to-speech failed:', speakError);
+      }
+
+      // Execute action if needed
+      if (intent.type === 'action' && intent.action?.screen) {
+        setTimeout(() => {
+          router.push(intent.action!.screen as any);
+        }, 1500);
+      }
+
+      setTimeout(() => setOrbState('idle'), 2000);
+    } catch (error) {
+      console.error('❌ Text processing error:', error);
+      setOrbState('idle');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setToastMessage(`Processing failed: ${errorMessage}. Please check your connection and try again.`);
+      setShowToast(true);
+    }
   };
 
   return (

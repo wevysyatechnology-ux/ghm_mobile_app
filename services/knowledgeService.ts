@@ -109,37 +109,41 @@ class KnowledgeService {
     try {
       console.log('🔍 Searching knowledge base for:', query);
 
-      // Generate embedding for query
-      const queryEmbedding = await this.generateEmbedding(query);
-
-      // Search using vector similarity in Supabase
-      // This requires pgvector extension and similarity search function
-      const { data, error } = await supabase.rpc('search_knowledge', {
-        query_embedding: queryEmbedding,
-        match_limit: limit,
-      });
-
-      if (error) {
-        console.error('❌ Knowledge search error:', error);
-        // Fallback to keyword search
-        return await this.keywordSearch(query, limit);
+      // Try keyword search first (works without embeddings)
+      const keywordResult = await this.keywordSearch(query, limit);
+      
+      if (keywordResult && keywordResult !== 'No relevant information found in knowledge base.') {
+        return keywordResult;
       }
 
-      if (!data || data.length === 0) {
-        console.log('⚠️ No relevant knowledge found');
-        return 'No relevant information found in knowledge base.';
+      // If keyword search fails, try embedding-based search
+      try {
+        const queryEmbedding = await this.generateEmbedding(query);
+        
+        if (queryEmbedding) {
+          const { data, error } = await supabase.rpc('search_knowledge', {
+            query_embedding: queryEmbedding,
+            match_limit: limit,
+          });
+
+          if (!error && data && data.length > 0) {
+            const context = data
+              .map((doc: any) => `${doc.metadata.title}:\n${doc.content}`)
+              .join('\n\n---\n\n');
+            
+            console.log('✅ Found', data.length, 'relevant documents (embedding search)');
+            return context;
+          }
+        }
+      } catch (embeddingError) {
+        console.log('⚠️ Embedding search not available, using keyword search');
       }
 
-      // Combine results into context
-      const context = data
-        .map((doc: any) => `${doc.metadata.title}:\n${doc.content}`)
-        .join('\n\n---\n\n');
-
-      console.log('✅ Found', data.length, 'relevant documents');
-      return context;
+      // Return keyword result or empty string
+      return keywordResult;
     } catch (error) {
       console.error('❌ Search failed:', error);
-      return await this.keywordSearch(query, limit);
+      return 'WeVysya is a business network. I can help you find members, post deals, and more.';
     }
   }
 
@@ -148,25 +152,59 @@ class KnowledgeService {
    */
   private async keywordSearch(query: string, limit: number): Promise<string> {
     try {
+      console.log('🔎 Performing keyword search for:', query);
+      
+      // Try simple text search using ilike (case-insensitive LIKE)
+      const searchTerm = `%${query.toLowerCase()}%`;
+      
       const { data, error } = await supabase
         .from('knowledge_base')
-        .select('*')
-        .textSearch('content', query, {
-          type: 'websearch',
-          config: 'english',
-        })
+        .select('content, metadata')
+        .or(`content.ilike.${searchTerm},metadata->>title.ilike.${searchTerm}`)
         .limit(limit);
 
-      if (error || !data || data.length === 0) {
+      if (error) {
+        console.error('❌ Keyword search error:', error);
+        // Return all documents as fallback
+        const { data: allDocs } = await supabase
+          .from('knowledge_base')
+          .select('content, metadata')
+          .limit(limit);
+        
+        if (allDocs && allDocs.length > 0) {
+          console.log('✅ Returning all documents as fallback');
+          return allDocs
+            .map((doc: any) => `${doc.metadata.title}:\n${doc.content}`)
+            .join('\n\n---\n\n');
+        }
+        
         return 'No relevant information found.';
       }
 
+      if (!data || data.length === 0) {
+        console.log('⚠️ No keyword matches, returning all documents');
+        // Return all documents if no matches
+        const { data: allDocs } = await supabase
+          .from('knowledge_base')
+          .select('content, metadata')
+          .limit(limit);
+        
+        if (allDocs && allDocs.length > 0) {
+          return allDocs
+            .map((doc: any) => `${doc.metadata.title}:\n${doc.content}`)
+            .join('\n\n---\n\n');
+        }
+        
+        return 'No relevant information found.';
+      }
+
+      console.log('✅ Found', data.length, 'documents via keyword search');
       return data
         .map((doc: any) => `${doc.metadata.title}:\n${doc.content}`)
         .join('\n\n---\n\n');
     } catch (error) {
       console.error('❌ Keyword search failed:', error);
-      return 'No relevant information found.';
+      return 'WeVysya is a business community network.';
     }
   }
 

@@ -8,16 +8,31 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#FF6B35",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Wevysya"
+    },
     "android": {
       "package": "com.wevysya.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0F172A"
-      }
+      },
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "NOTIFICATIONS",
+        "POST_NOTIFICATIONS"
+      ]
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wevysya.app"
+      "bundleIdentifier": "com.wevysya.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "web": {
       "bundler": "metro",

@@ -20,7 +20,7 @@ const corsHeaders = {
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
+    return new Response(null, {
       status: 204,
       headers: corsHeaders,
     });
@@ -84,11 +84,11 @@ serve(async (req: Request) => {
         messages: [
           {
             role: 'system',
-            content: `You are WeVysya Assistant's intent classifier.
+            content: `You are WeVysya Assistant, a helpful AI for the WeVysya community network.
 
 Analyze the user's query and determine if it's:
-1. A KNOWLEDGE question (asking about WeVysya, members, houses, events, etc.)
-2. An ACTION command (wants to perform a task)
+1. A KNOWLEDGE question (asking about WeVysya, members, houses, events, etc.) - ANSWER the question using the context
+2. An ACTION command (wants to perform a task) - Acknowledge what you'll do
 
 Available actions:
 - search_member: Find members by profession, industry, or location
@@ -103,21 +103,31 @@ Available actions:
 Context from knowledge base:
 ${context}
 
+IMPORTANT: 
+- For KNOWLEDGE questions, use the context above to provide a complete, helpful answer (2-4 sentences)
+- For ACTION commands, provide a friendly acknowledgment of what you'll do
+- Be conversational, warm, and helpful
+- If the context doesn't have the answer, politely say so and suggest alternatives
+
 Respond with a JSON object:
 {
   "type": "knowledge" or "action",
   "category": "for knowledge: members/houses/events/general, for action: the action name",
   "parameters": {},
-  "response": "friendly response to user",
+  "response": "FULL answer for knowledge OR friendly acknowledgment for actions",
   "confidence": 0.0-1.0
 }
 
 Examples:
+
 Query: "Find a CA in Bengaluru"
-Response: {"type": "action", "category": "search_member", "parameters": {"profession": "CA", "location": "Bengaluru"}, "response": "I'll find CAs in Bengaluru for you!", "confidence": 0.95}
+Response: {"type": "action", "category": "search_member", "parameters": {"profession": "CA", "location": "Bengaluru"}, "response": "I'll find Chartered Accountants in Bengaluru for you!", "confidence": 0.95}
 
 Query: "What is WeVysya?"
-Response: {"type": "knowledge", "category": "general", "parameters": {}, "response": "Based on our knowledge base...", "confidence": 0.90}`,
+Response: {"type": "knowledge", "category": "general", "parameters": {}, "response": "WeVysya is a revolutionary private business network exclusively for the Vysya community. It connects members across different business backgrounds through a trusted ecosystem, enabling collaboration, advice sharing, and business growth together. The platform features house-based social structures, business deal sharing, professional networking, and community support.", "confidence": 0.95}
+
+Query: "How do I post a deal?"
+Response: {"type": "knowledge", "category": "deals", "parameters": {}, "response": "To post a deal, go to the Discover tab and click 'Post Deal'. Fill in the title, description, amount, type (BUY, SELL, PARTNERSHIP, or INVESTMENT), and add relevant tags. You can set visibility to public or house-only, then submit. Interested members can then reach out to you directly!", "confidence": 0.95}`,
           },
           {
             role: 'user',
@@ -125,7 +135,8 @@ Response: {"type": "knowledge", "category": "general", "parameters": {}, "respon
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        temperature: 0.7,
+        max_tokens: 300,
       }),
     });
 

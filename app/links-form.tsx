@@ -5,8 +5,11 @@ import { ChevronLeft, User, Flame } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
+import { sendLinkReceivedNotification } from '@/utils/notificationHelpers';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LinksForm() {
+  const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -92,6 +95,19 @@ export default function LinksForm() {
         urgency: formData.urgency,
       });
       console.log('Link created successfully:', result);
+
+      // Send notification to the recipient
+      if (profile && selectedHouse) {
+        await sendLinkReceivedNotification({
+          recipientId: selectedMember.id,
+          linkId: result?.id || '',
+          senderName: profile.full_name || 'A member',
+          senderId: profile.id,
+          houseName: selectedHouse.house_name || 'Your House',
+          houseId: selectedHouse.id,
+          linkType: 'business',
+        });
+      }
 
       // Clear form
       setFormData({

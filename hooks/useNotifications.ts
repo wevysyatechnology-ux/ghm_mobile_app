@@ -29,6 +29,13 @@ export function useNotifications() {
   const initializeNotifications = async () => {
     if (!user) return;
 
+    // Skip initialization on web
+    if (Platform.OS === 'web') {
+      console.log('📱 Push notifications are only available on mobile apps');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const success = await notificationService.initialize(user.id);

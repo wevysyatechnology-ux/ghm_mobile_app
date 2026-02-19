@@ -42,6 +42,12 @@ class VoiceOSService {
    */
   async startRecording(): Promise<void> {
     try {
+      // Check platform - audio recording has limited support on web
+      if (Platform.OS === 'web') {
+        console.warn('⚠️ Audio recording on web has limited support');
+        // Continue anyway, but user should be aware
+      }
+
       // Request permissions
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
@@ -101,28 +107,43 @@ class VoiceOSService {
    */
   private async transcribeAudio(audioUri: string): Promise<string> {
     try {
-      // Read audio file
-      const response = await fetch(audioUri);
-      const blob = await response.blob();
+      console.log('🎙️ Preparing audio file for transcription...');
       
       // Create FormData for multipart upload
-      // Use URI-based file format compatible with React Native
       const formData = new FormData();
       
-      // For React Native, pass file as URI-based object
-      formData.append('file', {
+      // For React Native, we need to use the URI-based format
+      // The fetch API on React Native handles this specially
+      const fileData: any = {
         uri: audioUri,
         type: 'audio/m4a',
         name: 'audio.m4a',
-      } as any);
+      };
+      
+      // On web, we need to convert to blob
+      if (Platform.OS === 'web') {
+        const response = await fetch(audioUri);
+        const blob = await response.blob();
+        formData.append('file', blob, 'audio.m4a');
+      } else {
+        // On mobile, use URI format
+        formData.append('file', fileData as any);
+      }
       
       formData.append('language', 'en');
 
       // Call backend proxy endpoint via Supabase Edge Function
       const endpoint = getTranscribeEndpoint();
       
+      // Get Supabase anon key for authorization
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+      
+      console.log('📡 Calling Whisper transcribe endpoint...');
       const transcribeResponse = await fetch(endpoint, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
         body: formData,
       });
 
@@ -132,21 +153,24 @@ class VoiceOSService {
         // Try to parse JSON error first
         try {
           const errorData = await transcribeResponse.json();
-          errorMessage = errorData.error?.message || errorData.message || 'Unknown error';
+          console.error('❌ Transcribe error response:', errorData);
+          errorMessage = errorData.error?.message || errorData.error || errorData.message || 'Unknown error';
         } catch {
           // Fall back to text response
           try {
             const textError = await transcribeResponse.text();
+            console.error('❌ Transcribe text error:', textError);
             errorMessage = textError || `HTTP ${transcribeResponse.status}`;
           } catch {
             errorMessage = `HTTP ${transcribeResponse.status}: Failed to transcribe`;
           }
         }
         
-        throw new Error(`Whisper API error: ${errorMessage}`);
+        throw new Error(`Whisper transcription failed: ${errorMessage}`);
       }
 
       const data = await transcribeResponse.json();
+      console.log('✅ Transcription successful:', data.text);
       return data.text;
     } catch (error) {
       console.error('❌ Whisper transcription failed:', error);

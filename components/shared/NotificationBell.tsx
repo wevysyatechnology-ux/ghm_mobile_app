@@ -1,6 +1,8 @@
 /**
  * 🔔 Notification Bell Component
  * Shows unread notification count with bell icon
+ * Note: Push notifications only work on mobile (iOS/Android)
+ * Web users can still view in-app notifications
  */
 
 import React, { useEffect, useState } from 'react';
@@ -13,6 +15,7 @@ import {
   FlatList,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';

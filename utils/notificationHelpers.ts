@@ -164,6 +164,33 @@ export async function sendAttendanceMarkedNotification(params: {
 }
 
 /**
+ * 📅 Send I2WE Meeting Scheduled Notification
+ */
+export async function sendI2WEMeetingScheduledNotification(params: {
+  recipientId: string;
+  meetingId: string;
+  schedulerName: string;
+  schedulerId: string;
+  meetingDate: string;
+  notes?: string;
+}): Promise<boolean> {
+  return sendNotification({
+    userId: params.recipientId,
+    type: 'i2we_meeting_scheduled',
+    title: '📅 I2WE Meeting Scheduled',
+    body: `${params.schedulerName} has scheduled a 1-on-1 meeting with you on ${params.meetingDate}.`,
+    data: {
+      meetingId: params.meetingId,
+      schedulerName: params.schedulerName,
+      schedulerId: params.schedulerId,
+      meetingDate: params.meetingDate,
+      notes: params.notes,
+    },
+    priority: 'high',
+  });
+}
+
+/**
  * 🤝 Send AI Match Suggestion Notification
  */
 export async function sendAIMatchSuggestionNotification(params: {

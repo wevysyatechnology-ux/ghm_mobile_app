@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
     -- Member Activity
     link_received BOOLEAN DEFAULT true,
     deal_recorded BOOLEAN DEFAULT true,
+    i2we_meeting_scheduled BOOLEAN DEFAULT true,
     -- House & Events
     meeting_reminder BOOLEAN DEFAULT true,
     attendance_marked BOOLEAN DEFAULT true,
@@ -68,6 +69,19 @@ CREATE INDEX IF NOT EXISTS idx_notification_preferences_user_id ON notification_
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Service role can insert notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can view their own push tokens" ON push_tokens;
+DROP POLICY IF EXISTS "Users can insert their own push tokens" ON push_tokens;
+DROP POLICY IF EXISTS "Users can update their own push tokens" ON push_tokens;
+DROP POLICY IF EXISTS "Users can delete their own push tokens" ON push_tokens;
+DROP POLICY IF EXISTS "Users can view their own preferences" ON notification_preferences;
+DROP POLICY IF EXISTS "Users can insert their own preferences" ON notification_preferences;
+DROP POLICY IF EXISTS "Users can update their own preferences" ON notification_preferences;
 
 -- RLS Policies for notifications table
 CREATE POLICY "Users can view their own notifications"

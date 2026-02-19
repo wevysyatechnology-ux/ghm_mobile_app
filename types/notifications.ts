@@ -7,6 +7,7 @@ export type NotificationType =
   // Member Activity
   | 'link_received'
   | 'deal_recorded'
+  | 'i2we_meeting_scheduled'
   // House & Events
   | 'meeting_reminder'
   | 'attendance_marked'
@@ -46,6 +47,17 @@ export interface DealRecordedPayload extends BaseNotificationPayload {
     amount: number;
     currency: string;
     dealType: string;
+  };
+}
+
+export interface I2WEMeetingScheduledPayload extends BaseNotificationPayload {
+  type: 'i2we_meeting_scheduled';
+  data: {
+    meetingId: string;
+    schedulerName: string;
+    schedulerId: string;
+    meetingDate: string;
+    notes?: string;
   };
 }
 
@@ -119,6 +131,7 @@ export interface ApplicationApprovedPayload extends BaseNotificationPayload {
 export type NotificationPayload =
   | LinkReceivedPayload
   | DealRecordedPayload
+  | I2WEMeetingScheduledPayload
   | MeetingReminderPayload
   | AttendanceMarkedPayload
   | AIMatchSuggestionPayload
@@ -149,6 +162,7 @@ export interface NotificationPreferences {
   // Member Activity
   link_received: boolean;
   deal_recorded: boolean;
+  i2we_meeting_scheduled: boolean;
   // House & Events
   meeting_reminder: boolean;
   attendance_marked: boolean;
@@ -178,6 +192,10 @@ export const NotificationTemplates: Record<
   deal_recorded: (data) => ({
     title: '💰 Deal Recorded',
     body: `${data.memberName} has recorded a deal with you worth ${data.currency}${data.amount.toLocaleString()}.`,
+  }),
+  i2we_meeting_scheduled: (data) => ({
+    title: '📅 I2WE Meeting Scheduled',
+    body: `${data.schedulerName} has scheduled a 1-on-1 meeting with you on ${data.meetingDate}.`,
   }),
   meeting_reminder: (data) => ({
     title: '📅 Meeting Reminder',
@@ -209,6 +227,7 @@ export const NotificationTemplates: Record<
 export const NotificationNavigationMap: Record<NotificationType, string> = {
   link_received: '/links-form',
   deal_recorded: '/deals-form',
+  i2we_meeting_scheduled: '/i2we-form',
   meeting_reminder: '/channels',
   attendance_marked: '/(tabs)/activity',
   ai_match_suggestion: '/(tabs)/discover',

@@ -99,6 +99,9 @@ class ActionEngine {
     try {
       console.log('🎯 Classifying intent for:', query);
 
+      // Get Supabase anon key for authorization
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
       // Call backend proxy for intent classification
       const intentData = await fetchWithErrorHandling<any>(
         getClassifyIntentEndpoint(),
@@ -106,6 +109,7 @@ class ActionEngine {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
           },
           body: JSON.stringify({
             query,

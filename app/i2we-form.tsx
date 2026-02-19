@@ -15,8 +15,11 @@ import { colors, spacing } from '@/constants/theme';
 import { I2WEService } from '@/services/i2weService';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
+import { sendI2WEMeetingScheduledNotification } from '@/utils/notificationHelpers';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function I2WEForm() {
+  const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -72,11 +75,23 @@ export default function I2WEForm() {
     }
 
     try {
-      await I2WEService.createMeeting({
+      const result = await I2WEService.createMeeting({
         member_2_id: selectedMember.id,
         meeting_date: formData.meeting_date,
         notes: formData.notes,
       });
+
+      // Send notification to the selected member
+      if (profile) {
+        await sendI2WEMeetingScheduledNotification({
+          recipientId: selectedMember.id,
+          meetingId: result?.id || '',
+          schedulerName: profile.full_name || 'A member',
+          schedulerId: profile.id,
+          meetingDate: formData.meeting_date,
+          notes: formData.notes,
+        });
+      }
 
       // Clear form
       setFormData({

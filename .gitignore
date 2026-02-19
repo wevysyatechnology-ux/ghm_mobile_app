@@ -33,3 +33,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+# supabase
+supabase/.temp/
+.temp/
+
+# build
+*.apk
+*.aab
+*.ipa
