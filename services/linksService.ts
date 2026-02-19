@@ -94,7 +94,7 @@ export const LinksService = {
       console.error('❌ Exception in getHouseMembers:', error);
       return [];
     }
-  }
+  },
 
   async createLink(linkData: CreateLinkData): Promise<CoreLink> {
     try {
