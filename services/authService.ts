@@ -292,19 +292,23 @@ export const authService = {
       let houseData = null;
       let houseZone = null;
       if (profilesData?.house_id) {
-        const { data: house } = await supabase
+        const { data: house, error: houseError } = await supabase
           .from('houses')
-          .select('id, house_name, city, state, country, zone')
+          .select('id, name, city, state, country, zone')
           .eq('id', profilesData.house_id)
           .maybeSingle();
         
+        if (houseError) {
+          console.warn('⚠️ Error fetching house data:', houseError);
+        }
+
         if (house) {
           houseZone = house.zone;
           // Map houses table structure to match CoreHouse interface
           houseData = {
             id: house.id,
-            house_name: house.house_name || '',
-            city: house.city || house.zone || '',
+            house_name: house.name || '',
+            city: house.city || '',
             state: house.state || '',
             country: house.country || '',
             created_at: '',
