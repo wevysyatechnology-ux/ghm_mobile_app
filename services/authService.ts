@@ -294,7 +294,7 @@ export const authService = {
       if (profilesData?.house_id) {
         const { data: house } = await supabase
           .from('houses')
-          .select('id, name, state, zone')
+          .select('id, house_name, city, state, country, zone')
           .eq('id', profilesData.house_id)
           .maybeSingle();
         
@@ -303,10 +303,10 @@ export const authService = {
           // Map houses table structure to match CoreHouse interface
           houseData = {
             id: house.id,
-            house_name: house.name,
-            city: house.zone || '',
+            house_name: house.house_name || '',
+            city: house.city || house.zone || '',
             state: house.state || '',
-            country: '',
+            country: house.country || '',
             created_at: '',
           };
         }
