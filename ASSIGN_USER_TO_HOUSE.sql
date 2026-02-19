@@ -7,8 +7,8 @@
 SELECT id, email FROM auth.users LIMIT 10;
 
 -- Step 2: Create a house if it doesn't exist
--- You can run this to see existing houses first:
-SELECT id, house_name, city, state, country FROM houses LIMIT 10;
+-- Check existing houses (note: column is 'name', NOT 'house_name')
+SELECT id, name, city, state, country FROM houses LIMIT 10;
 
 -- Step 3: Insert a test house (if needed)
 INSERT INTO houses (house_name, city, state, country, status)
