@@ -19,7 +19,7 @@ import { sendI2WEMeetingScheduledNotification } from '@/utils/notificationHelper
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function I2WEForm() {
-  const { profile } = useAuth();
+  const { profile, userId, isLoading } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -32,8 +32,12 @@ export default function I2WEForm() {
   });
 
   useEffect(() => {
+    if (isLoading || !userId) {
+      return;
+    }
+
     loadUserHouses();
-  }, []);
+  }, [userId, isLoading]);
 
   useEffect(() => {
     if (selectedHouse) {

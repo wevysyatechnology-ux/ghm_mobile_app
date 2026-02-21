@@ -22,7 +22,7 @@ import { actionEngine } from '@/services/actionEngine';
 import { knowledgeService } from '@/services/knowledgeService';
 
 export default function Home() {
-  const { profile } = useAuth();
+  const { profile, userId, isLoading } = useAuth();
   const { processIntent } = useAI();
   const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
   const [toastMessage, setToastMessage] = useState('');
@@ -33,8 +33,20 @@ export default function Home() {
   const [meetingsCount, setMeetingsCount] = useState(0);
 
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (!userId) {
+      setLinksGivenCount(0);
+      setLinksReceivedCount(0);
+      setClosedDealsCount(0);
+      setMeetingsCount(0);
+      return;
+    }
+
     loadStats();
-  }, []);
+  }, [userId, isLoading]);
 
   const loadStats = async () => {
     try {

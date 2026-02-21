@@ -9,7 +9,7 @@ import { sendLinkReceivedNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LinksForm() {
-  const { profile } = useAuth();
+  const { profile, userId, isLoading } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -26,8 +26,12 @@ export default function LinksForm() {
   });
 
   useEffect(() => {
+    if (isLoading || !userId) {
+      return;
+    }
+
     loadUserHouses();
-  }, []);
+  }, [userId, isLoading]);
 
   useEffect(() => {
     if (selectedHouse) {
