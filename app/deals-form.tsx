@@ -10,7 +10,7 @@ import { sendDealRecordedNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function DealsForm() {
-  const { profile } = useAuth();
+  const { profile, userId, isLoading } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | { id: 'wevysya', full_name: 'WeVysya' } | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -24,8 +24,12 @@ export default function DealsForm() {
   });
 
   useEffect(() => {
+    if (isLoading || !userId) {
+      return;
+    }
+
     loadUserHouses();
-  }, []);
+  }, [userId, isLoading]);
 
   useEffect(() => {
     if (selectedHouse) {
@@ -35,23 +39,47 @@ export default function DealsForm() {
 
   const loadUserHouses = async () => {
     try {
+      console.log('🏠 Loading user houses...');
       const data = await LinksService.getUserHouses();
+      console.log('✅ Houses loaded:', data.length);
+      
+      if (data.length === 0) {
+        Alert.alert(
+          'No House Found',
+          'You are not assigned to a house yet. Please contact your administrator.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       setHouses(data);
       if (data.length > 0) {
         setSelectedHouse(data[0]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load houses');
+      console.error('❌ Error in loadUserHouses:', error);
+      Alert.alert(
+        'Error',
+        'Failed to load houses. Please check your profile setup.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   const loadHouseMembers = async () => {
     if (!selectedHouse) return;
     try {
+      console.log('👥 Loading members for house:', selectedHouse.house_name || selectedHouse.id);
       const members = await LinksService.getHouseMembers(selectedHouse.id);
+      console.log('✅ Members loaded:', members.length);
       setHouseMembers(members);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load members');
+      console.error('❌ Error loading house members:', error);
+      Alert.alert(
+        'Error',
+        `Failed to load members. Please try again.`,
+        [{ text: 'OK' }]
+      );
     }
   };
 

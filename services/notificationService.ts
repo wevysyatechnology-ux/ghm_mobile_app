@@ -40,7 +40,7 @@ class NotificationService {
     try {
       console.log('🔔 Initializing notification service...');
 
-      // Skip push notifications on web (requires VAPID keys)
+      // Skip push notifications on web
       if (Platform.OS === 'web') {
         console.warn('⚠️ Push notifications not supported on web builds');
         console.warn('📱 Please use the mobile app (iOS/Android) for push notifications');

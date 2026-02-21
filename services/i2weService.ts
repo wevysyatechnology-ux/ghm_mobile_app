@@ -50,12 +50,17 @@ export const I2WEService = {
       }
 
       // Fetch additional details from users_profile table if available
-      const { data: userProfiles } = await supabase
+      const { data: userProfiles, error: userProfilesError } = await supabase
         .from('users_profile')
         .select('id, full_name, phone_number, business_category, city')
         .in('id', userIds);
 
-      console.log('User profiles found in users_profile:', userProfiles?.length || 0);
+      if (userProfilesError) {
+        console.warn('⚠️ Could not fetch extended profiles (users_profile table may not be accessible):', userProfilesError);
+        // Continue with just profiles table data
+      }
+
+      console.log('✅ User profiles found in users_profile:', userProfiles?.length || 0);
 
       // Create a map of users_profile data
       const profileMap = new Map((userProfiles || []).map((p: any) => [p.id, p]));
@@ -80,8 +85,8 @@ export const I2WEService = {
       console.log(`Loaded ${sortedProfiles.length} members for house ${houseId}`, sortedProfiles);
       return sortedProfiles;
     } catch (error) {
-      console.error('Error in getHouseMembers:', error);
-      throw error;
+      console.error('❌ Exception in getHouseMembers:', error);
+      return [];
     }
   },
 

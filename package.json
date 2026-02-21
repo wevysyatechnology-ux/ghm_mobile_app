@@ -9,7 +9,15 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "db:check": "npx tsx scripts/init-database.ts",
-    "create-test-user": "npx tsx scripts/create-test-user-db.ts"
+    "create-test-user": "npx tsx scripts/create-test-user-db.ts",
+    "supabase:login": "npx supabase login",
+    "supabase:link": "npx supabase link --project-ref vlwppdpodavowfnyhtkh",
+    "db:push": "npx supabase db push",
+    "db:pull": "npx supabase db pull",
+    "db:diff": "npx supabase db diff --linked",
+    "db:lint": "npx supabase db lint",
+    "db:dump:schema": "npx supabase db dump --linked --schema public --file supabase/schema.sql",
+    "db:types": "npx supabase gen types typescript --linked > types/database.types.ts"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
