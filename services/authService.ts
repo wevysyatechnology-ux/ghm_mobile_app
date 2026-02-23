@@ -17,6 +17,43 @@ const TEST_USER_EMAIL = 'test9902093811@wevysya.com';
 const TEST_USER_PASSWORD = 'TestUser123!';
 
 export const authService = {
+  async signUp(email: string, password: string): Promise<AuthResponse> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: undefined,
+        },
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      if (data?.user) {
+        await this.ensureProfileExists(data.user.id, data.user.phone || '');
+
+        return {
+          success: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Failed to create account',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to create account',
+      };
+    }
+  },
+
   async signInWithEmail(email: string, password: string): Promise<AuthResponse> {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
