@@ -274,7 +274,7 @@ export const authService = {
         console.log('ensureProfileExists - creating new profile');
         const { data: insertData, error: insertError } = await supabase.from('users_profile').insert({
           id: userId,
-          full_name: '',
+          full_name: null,
           phone_number: phoneNumber,
           vertical_type: 'open_circle',
         }).select();

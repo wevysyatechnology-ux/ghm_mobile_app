@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   console.log('🔐 AuthProvider initialized');
 
   const isProfileComplete = Boolean(
-    profile && profile.full_name && profile.full_name.trim().length > 0
+    profile && profile.full_name && profile.full_name !== null && profile.full_name.trim().length > 0
   );
 
   console.log('AuthContext - isProfileComplete:', isProfileComplete, 'profile:', {
