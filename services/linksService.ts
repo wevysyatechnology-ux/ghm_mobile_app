@@ -20,7 +20,7 @@ export const LinksService = {
     try {
       // Query profiles table directly for house members with their profile data
       console.log('Fetching profiles for house_id:', houseId, 'currentUserId:', currentUserId);
-      
+
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -28,7 +28,8 @@ export const LinksService = {
           full_name,
           zone
         `)
-        .eq('house_id', houseId);
+        .eq('house_id', houseId)
+        .eq('approval_status', 'approved');
 
       if (profilesError) {
         console.error('Error fetching profiles with house_id:', profilesError);
