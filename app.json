@@ -4,12 +4,12 @@
     "slug": "wevysya-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/wevysya_logo_r.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "notification": {
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/images/wevysya_logo_r.png",
       "color": "#FF6B35",
       "androidMode": "default",
       "androidCollapsedTitle": "Wevysya"
@@ -17,7 +17,7 @@
     "android": {
       "package": "com.wevysya.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/wevysya_logo_r.png",
         "backgroundColor": "#0F172A"
       },
       "permissions": [
@@ -37,7 +37,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/wevysya_logo_r.png"
     },
     "plugins": [
       "expo-router",
