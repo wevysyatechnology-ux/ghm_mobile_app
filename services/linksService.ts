@@ -13,76 +13,36 @@ export interface CreateLinkData {
 
 export const LinksService = {
   async getHouseMembers(houseId: string): Promise<UserProfile[]> {
-    // Get current user to exclude them from the list
     const { data: userData } = await supabase.auth.getUser();
     const currentUserId = userData?.user?.id;
 
     try {
-      // Query profiles table directly for house members with their profile data
-      console.log('Fetching profiles for house_id:', houseId, 'currentUserId:', currentUserId);
-
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          full_name,
-          zone
-        `)
+        .select('id, full_name, business, mobile, zone, approval_status')
         .eq('house_id', houseId)
-        .eq('approval_status', 'approved');
+        .eq('approval_status', 'approved')
+        .neq('id', currentUserId);
 
       if (profilesError) {
-        console.error('Error fetching profiles with house_id:', profilesError);
+        console.error('Error fetching profiles:', profilesError);
         throw profilesError;
       }
 
-      console.log('Profiles found:', profilesData?.length || 0, 'profiles:', profilesData);
-
       if (!profilesData || profilesData.length === 0) {
-        console.log('No members found for house:', houseId);
         return [];
       }
 
-      // Filter out current user and get their IDs
-      const otherMembers = profilesData.filter((p: any) => p.id !== currentUserId);
-      const userIds = otherMembers.map((p: any) => p.id);
+      const sortedProfiles = profilesData
+        .map((p: any) => ({
+          id: p.id,
+          full_name: p.full_name || 'Unknown',
+          phone_number: p.mobile || null,
+          business_category: p.business || '',
+          city: p.zone || '',
+        }))
+        .sort((a: any, b: any) => (a.full_name || '').localeCompare(b.full_name || ''));
 
-      console.log('User IDs after filtering current user:', userIds);
-
-      if (userIds.length === 0) {
-        console.log('No other members in house after filtering current user');
-        return [];
-      }
-
-      // Fetch additional details from users_profile table if available
-      const { data: userProfiles } = await supabase
-        .from('users_profile')
-        .select('id, full_name, phone_number, business_category, city')
-        .in('id', userIds);
-
-      console.log('User profiles found in users_profile:', userProfiles?.length || 0);
-
-      // Create a map of users_profile data
-      const profileMap = new Map((userProfiles || []).map((p: any) => [p.id, p]));
-
-      // Merge data from both tables, preferring users_profile when available
-      const mergedProfiles = otherMembers.map((profile: any) => {
-        const userProfile = profileMap.get(profile.id);
-        return {
-          id: profile.id,
-          full_name: userProfile?.full_name || profile.full_name || 'Unknown',
-          phone_number: userProfile?.phone_number || null,
-          business_category: userProfile?.business_category || '',
-          city: userProfile?.city || profile.zone || '',
-        };
-      });
-
-      // Sort by full_name
-      const sortedProfiles = mergedProfiles.sort((a, b) => 
-        (a.full_name || '').localeCompare(b.full_name || '')
-      );
-
-      console.log(`Loaded ${sortedProfiles.length} members for house ${houseId}`, sortedProfiles);
       return sortedProfiles;
     } catch (error) {
       console.error('Error in getHouseMembers:', error);

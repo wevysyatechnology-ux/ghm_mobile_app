@@ -11,9 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function LinksForm() {
   const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
-  const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
-  const [houses, setHouses] = useState<any[]>([]);
+  const [currentHouseId, setCurrentHouseId] = useState<string | null>(null);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -26,42 +25,17 @@ export default function LinksForm() {
   });
 
   useEffect(() => {
-    loadUserHouses();
+    loadHouseMembers();
   }, []);
 
-  useEffect(() => {
-    if (selectedHouse) {
-      loadHouseMembers();
-    }
-  }, [selectedHouse]);
-
-  const loadUserHouses = async () => {
-    try {
-      const data = await LinksService.getUserHouses();
-      setHouses(data);
-      if (data.length > 0) {
-        setSelectedHouse(data[0]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load houses');
-    }
-  };
-
   const loadHouseMembers = async () => {
-    if (!selectedHouse) return;
     try {
-      console.log('Loading members for house:', selectedHouse.house_name || selectedHouse.id);
-      const members = await LinksService.getHouseMembers(selectedHouse.id);
-      console.log('Loaded members:', members.length);
+      const houses = await LinksService.getUserHouses();
+      if (houses.length === 0) return;
+      const houseId = houses[0].id;
+      setCurrentHouseId(houseId);
+      const members = await LinksService.getHouseMembers(houseId);
       setHouseMembers(members);
-      
-      if (members.length === 0) {
-        Alert.alert(
-          'No Members Found',
-          'There are no other members in this house to send a link to.',
-          [{ text: 'OK' }]
-        );
-      }
     } catch (error: any) {
       console.error('Error loading house members:', error);
       Alert.alert('Error', `Failed to load members: ${error.message || 'Unknown error'}`);
@@ -97,14 +71,14 @@ export default function LinksForm() {
       console.log('Link created successfully:', result);
 
       // Send notification to the recipient
-      if (profile && selectedHouse) {
+      if (profile && currentHouseId) {
         await sendLinkReceivedNotification({
           recipientId: selectedMember.id,
           linkId: result?.id || '',
           senderName: profile.full_name || 'A member',
           senderId: profile.id,
-          houseName: selectedHouse.house_name || 'Your House',
-          houseId: selectedHouse.id,
+          houseName: 'Your House',
+          houseId: currentHouseId,
           linkType: 'business',
         });
       }
