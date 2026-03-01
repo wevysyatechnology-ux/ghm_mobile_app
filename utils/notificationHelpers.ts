@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { Platform } from 'react-native';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const NOTIFICATION_ENDPOINT = `${SUPABASE_URL}/functions/v1/send-notification`;
@@ -24,11 +23,6 @@ interface SendNotificationOptions {
  */
 async function sendNotification(options: SendNotificationOptions): Promise<boolean> {
   try {
-    if (Platform.OS === 'web') {
-      console.warn('⚠️ Skipping push send on web. Mobile push flow only.');
-      return false;
-    }
-
     const { data: { session } } = await supabase.auth.getSession();
     
     const response = await fetch(NOTIFICATION_ENDPOINT, {

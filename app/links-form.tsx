@@ -9,7 +9,7 @@ import { sendLinkReceivedNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LinksForm() {
-  const { profile, userId, isLoading } = useAuth();
+  const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
   const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
@@ -26,12 +26,8 @@ export default function LinksForm() {
   });
 
   useEffect(() => {
-    if (isLoading || !userId) {
-      return;
-    }
-
     loadUserHouses();
-  }, [userId, isLoading]);
+  }, []);
 
   useEffect(() => {
     if (selectedHouse) {
@@ -41,56 +37,36 @@ export default function LinksForm() {
 
   const loadUserHouses = async () => {
     try {
-      console.log('🏠 Loading user houses...');
       const data = await LinksService.getUserHouses();
-      console.log('✅ Houses loaded:', data.length);
-      
-      if (data.length === 0) {
-        Alert.alert(
-          'No House Found',
-          'You are not assigned to a house yet. Please contact your administrator.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-      
       setHouses(data);
       if (data.length > 0) {
         setSelectedHouse(data[0]);
       }
     } catch (error) {
-      console.error('❌ Error in loadUserHouses:', error);
-      Alert.alert(
-        'Error',
-        'Failed to load houses. Please check your profile setup.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Failed to load houses');
     }
   };
 
   const loadHouseMembers = async () => {
     if (!selectedHouse) return;
     try {
-      console.log('👥 Loading members for house:', selectedHouse.house_name || selectedHouse.id);
+      console.log('Loading members for house:', selectedHouse.house_name || selectedHouse.id);
       const members = await LinksService.getHouseMembers(selectedHouse.id);
-      console.log('✅ Members loaded:', members.length);
+      console.log('Loaded members:', members.length);
       setHouseMembers(members);
       
       if (members.length === 0) {
         Alert.alert(
           'No Members Found',
-          'There are no other members in this house to send a link to. Please contact your house administrator.',
+          'There are no other members in this house to send a link to.',
           [{ text: 'OK' }]
         );
       }
     } catch (error: any) {
-      console.error('❌ Error loading house members:', error);
-      Alert.alert(
-        'Error',
-        `Failed to load members: ${error.message || 'Unknown error'}. Check console for details.`
-      );
+      console.error('Error loading house members:', error);
+      Alert.alert('Error', `Failed to load members: ${error.message || 'Unknown error'}`);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     console.log('Submit button clicked');

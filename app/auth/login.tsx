@@ -410,6 +410,15 @@ export default function LoginScreen() {
                     Pre-filled above
                   </Text>
                 </View>
+
+                <View style={styles.signupPrompt}>
+                  <Text style={styles.signupText}>Don't have an account?</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/auth/signup')}
+                    disabled={isLoading}>
+                    <Text style={styles.signupLink}>Create Account</Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
           </Animated.View>
@@ -573,5 +582,21 @@ const styles = StyleSheet.create({
     color: colors.accent_green_bright,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  signupPrompt: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  signupText: {
+    fontSize: 14,
+    color: colors.text_muted,
+  },
+  signupLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.accent_green_bright,
   },
 });

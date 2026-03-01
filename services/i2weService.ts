@@ -16,7 +16,7 @@ export const I2WEService = {
     try {
       // Query profiles table directly for house members with their profile data
       console.log('Fetching profiles for house_id:', houseId, 'currentUserId:', currentUserId);
-      
+
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -24,7 +24,8 @@ export const I2WEService = {
           full_name,
           zone
         `)
-        .eq('house_id', houseId);
+        .eq('house_id', houseId)
+        .eq('approval_status', 'approved');
 
       if (profilesError) {
         console.error('Error fetching profiles with house_id:', profilesError);
@@ -50,17 +51,12 @@ export const I2WEService = {
       }
 
       // Fetch additional details from users_profile table if available
-      const { data: userProfiles, error: userProfilesError } = await supabase
+      const { data: userProfiles } = await supabase
         .from('users_profile')
         .select('id, full_name, phone_number, business_category, city')
         .in('id', userIds);
 
-      if (userProfilesError) {
-        console.warn('⚠️ Could not fetch extended profiles (users_profile table may not be accessible):', userProfilesError);
-        // Continue with just profiles table data
-      }
-
-      console.log('✅ User profiles found in users_profile:', userProfiles?.length || 0);
+      console.log('User profiles found in users_profile:', userProfiles?.length || 0);
 
       // Create a map of users_profile data
       const profileMap = new Map((userProfiles || []).map((p: any) => [p.id, p]));
@@ -85,8 +81,8 @@ export const I2WEService = {
       console.log(`Loaded ${sortedProfiles.length} members for house ${houseId}`, sortedProfiles);
       return sortedProfiles;
     } catch (error) {
-      console.error('❌ Exception in getHouseMembers:', error);
-      return [];
+      console.error('Error in getHouseMembers:', error);
+      throw error;
     }
   },
 

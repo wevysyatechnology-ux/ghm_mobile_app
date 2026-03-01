@@ -17,6 +17,43 @@ const TEST_USER_EMAIL = 'test9902093811@wevysya.com';
 const TEST_USER_PASSWORD = 'TestUser123!';
 
 export const authService = {
+  async signUp(email: string, password: string): Promise<AuthResponse> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: undefined,
+        },
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      if (data?.user) {
+        await this.ensureProfileExists(data.user.id, data.user.phone || '');
+
+        return {
+          success: true,
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Failed to create account',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Failed to create account',
+      };
+    }
+  },
+
   async signInWithEmail(email: string, password: string): Promise<AuthResponse> {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -237,7 +274,7 @@ export const authService = {
         console.log('ensureProfileExists - creating new profile');
         const { data: insertData, error: insertError } = await supabase.from('users_profile').insert({
           id: userId,
-          full_name: '',
+          full_name: null,
           phone_number: phoneNumber,
           vertical_type: 'open_circle',
         }).select();
@@ -292,25 +329,21 @@ export const authService = {
       let houseData = null;
       let houseZone = null;
       if (profilesData?.house_id) {
-        const { data: house, error: houseError } = await supabase
+        const { data: house } = await supabase
           .from('houses')
-          .select('id, name, city, state, country, zone')
+          .select('id, name, state, zone')
           .eq('id', profilesData.house_id)
           .maybeSingle();
         
-        if (houseError) {
-          console.warn('⚠️ Error fetching house data:', houseError);
-        }
-
         if (house) {
           houseZone = house.zone;
           // Map houses table structure to match CoreHouse interface
           houseData = {
             id: house.id,
-            house_name: house.name || '',
-            city: house.city || '',
+            house_name: house.name,
+            city: house.zone || '',
             state: house.state || '',
-            country: house.country || '',
+            country: '',
             created_at: '',
           };
         }
