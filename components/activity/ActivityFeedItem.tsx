@@ -5,6 +5,7 @@ import {
   UserPlus,
   Calendar,
   Sparkles,
+  Link,
 } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '@/constants/theme';
 import type { Activity } from '@/types';
@@ -19,6 +20,7 @@ const ICON_MAP = {
   visitor: UserPlus,
   meeting: Calendar,
   suggestion: Sparkles,
+  link: Link,
 };
 
 export default function ActivityFeedItem({ activity }: ActivityFeedItemProps) {
@@ -68,18 +70,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.md,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   message: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
     marginBottom: spacing.xs,
     lineHeight: 20,
   },
   timestamp: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.xs,
     color: colors.text_secondary,
     marginBottom: spacing.sm,
@@ -92,8 +96,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent_green_bright,
   },
   actionButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.sm,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
 });

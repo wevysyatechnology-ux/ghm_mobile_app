@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { voiceOS } from './voiceOSService';
 
 // Speech recognition interface for cross-platform compatibility
 interface SpeechRecognitionResult {
@@ -111,16 +112,11 @@ class SpeechService {
     if (Platform.OS === 'web') {
       return this.speakWeb(text, options);
     } else {
-      // For mobile, we can use expo-speech
+      // For mobile, use the VoiceOS Deepgram integration
       try {
-        const Speech = require('expo-speech');
-        await Speech.speak(text, {
-          language: options?.language || 'en-US',
-          pitch: options?.pitch || 1.0,
-          rate: options?.rate || 1.0,
-        });
+        await voiceOS.speak(text);
       } catch (error) {
-        console.log('Expo Speech not available, voice output disabled');
+        console.log('Voice output failed:', error);
       }
     }
   }
@@ -158,12 +154,7 @@ class SpeechService {
     if (Platform.OS === 'web' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     } else {
-      try {
-        const Speech = require('expo-speech');
-        Speech.stop();
-      } catch (error) {
-        // Speech not available
-      }
+      voiceOS.stopSpeaking();
     }
   }
 

@@ -31,7 +31,7 @@ export default function GradientText({
 
 const styles = StyleSheet.create({
   text: {
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
   },
   transparent: {
     opacity: 0,

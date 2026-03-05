@@ -33,8 +33,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   text: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.xs,
     color: colors.text_muted,
-    fontWeight: '500',
   },
 });

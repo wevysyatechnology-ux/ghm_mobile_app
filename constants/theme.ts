@@ -1,23 +1,23 @@
 export const colors = {
   bg_primary: '#000000',
-  bg_secondary: '#0F1310',
-  bg_card: '#1A1F1C',
-  text_primary: '#FFFFFF',
-  text_secondary: '#9CA3AF',
-  text_muted: '#6B7280',
-  text_tertiary: '#6B7280',
-  accent: '#10B981',
-  accent_green: '#10B981',
-  accent_green_bright: '#34D399',
-  accent_green_glow: '#6EE7B7',
-  accent_muted: '#059669',
+  bg_secondary: '#14231f', // Abyssal Teal
+  bg_card: '#0d3934', // Sea Moss
+  text_primary: '#ffffff', // Pure White
+  text_secondary: '#E2E8F0', // Slightly muted white
+  text_muted: '#9CA3AF',
+  text_tertiary: '#9CA3AF',
+  accent: '#317559', // Eucalyptus Green
+  accent_green: '#045C00', // Deep Forest Green
+  accent_green_bright: '#317559', // Eucalyptus Green
+  accent_green_glow: '#317559', // Eucalyptus Green
+  accent_muted: '#14231f', // Abyssal Teal
   accent_blue: '#3B82F6',
   accent_red: '#EF4444',
   danger_red: '#EF4444',
-  border_primary: '#1F2937',
-  border_secondary: '#374151',
+  border_primary: '#14231f', // Abyssal Teal
+  border_secondary: '#0d3934', // Sea Moss
   background: '#000000',
-  card_background: '#1A1F1C',
+  card_background: '#0d3934', // Sea Moss
 };
 
 export const spacing = {
@@ -36,11 +36,20 @@ export const fontSize = {
   lg: 18,
   xl: 20,
   xxl: 24,
+  h1: 32,
+  h2: 24,
+};
+
+export const fontFamily = {
+  regular: 'Poppins-Regular',
+  medium: 'Poppins-Medium',
+  semiBold: 'Poppins-SemiBold',
+  bold: 'Poppins-Bold',
 };
 
 export const borderRadius = {
-  button: 12,
-  card: 16,
+  button: 16, // Consistent rounded components
+  card: 20,
   pill: 999,
 };
 
@@ -49,7 +58,7 @@ export const COLORS = {
   surface: colors.bg_secondary,
   surfaceVariant: colors.bg_card,
   primary: colors.accent_green,
-  onPrimary: '#FFFFFF',
+  onPrimary: '#ffffff',
   text: colors.text_primary,
   textSecondary: colors.text_secondary,
   textTertiary: colors.text_muted,
@@ -61,6 +70,7 @@ export const SPACING = spacing;
 
 export const TYPOGRAPHY = {
   sizes: fontSize,
+  family: fontFamily,
 };
 
 export const RADIUS = {

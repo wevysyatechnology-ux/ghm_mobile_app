@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   chipText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.sm,
-    fontWeight: '600',
     color: colors.text_primary,
     letterSpacing: 0.2,
   },

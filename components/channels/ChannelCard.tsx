@@ -1,4 +1,16 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  Link as LinkIcon,
+  Handshake,
+  Users,
+  UserPlus,
+  Briefcase,
+  TrendingUp,
+  HelpCircle,
+  Megaphone,
+  Bell,
+  User,
+} from 'lucide-react-native';
 import { Channel } from '@/types/database';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '@/constants/theme';
 
@@ -8,7 +20,34 @@ interface ChannelCardProps {
   isPriority?: boolean;
 }
 
+const getChannelIcon = (channel: Channel) => {
+  const slug = (channel.slug || '').toLowerCase();
+  const name = (channel.name || '').toLowerCase();
+
+  if (slug.includes('link') || name.includes('link')) return LinkIcon;
+  if (slug.includes('deal') || name.includes('deal')) return Handshake;
+  if (
+    slug.includes('i2we') ||
+    slug.includes('12we') ||
+    slug.includes('meeting') ||
+    name.includes('i2we') ||
+    name.includes('meeting')
+  ) {
+    return Users;
+  }
+  if (slug.includes('visitor') || name.includes('visitor')) return UserPlus;
+  if (slug.includes('job') || name.includes('job')) return Briefcase;
+  if (slug.includes('opportun') || name.includes('opportun')) return TrendingUp;
+  if (slug.includes('ask') || name.includes('ask')) return HelpCircle;
+  if (slug.includes('announc') || name.includes('announc')) return Megaphone;
+  if (slug.includes('notif') || name.includes('notif')) return Bell;
+
+  return User;
+};
+
 export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) {
+  const IconComponent = getChannelIcon(channel);
+
   return (
     <TouchableOpacity
       style={[styles.card, isPriority && styles.priorityCard]}
@@ -16,7 +55,7 @@ export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) 
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, isPriority && styles.priorityIconContainer]}>
-        <Text style={styles.icon}>{channel.icon}</Text>
+        <IconComponent size={26} color={COLORS.primary} />
       </View>
       <View style={styles.content}>
         <Text style={[styles.title, isPriority && styles.priorityTitle]}>{channel.name}</Text>
@@ -56,22 +95,20 @@ const styles = StyleSheet.create({
   priorityIconContainer: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
   },
-  icon: {
-    fontSize: 28,
-  },
   content: {
     flex: 1,
   },
   title: {
+    fontFamily: 'Poppins-Medium',
     fontSize: TYPOGRAPHY.sizes.lg,
-    fontWeight: '600',
     color: COLORS.text,
     marginBottom: SPACING.xs,
   },
   priorityTitle: {
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
   },
   description: {
+    fontFamily: 'Poppins-Regular',
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.textSecondary,
     lineHeight: 20,

@@ -46,7 +46,7 @@ interface ExpoMessage {
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
@@ -100,7 +100,29 @@ serve(async (req: Request) => {
       );
     }
 
-    // Fetch push tokens for target users
+    // 1. Save notifications to database FIRST
+    const notificationRecords = targetUserIds.map((userId) => ({
+      user_id: userId,
+      type: payload.type,
+      title: payload.title,
+      body: payload.body,
+      data: payload.data || {},
+      read: false,
+      created_at: new Date().toISOString(),
+      delivery_status: 'pending',
+    }));
+
+    const { error: insertError } = await supabase
+      .from('notifications')
+      .insert(notificationRecords);
+
+    if (insertError) {
+      console.error('Failed to save notifications to DB:', insertError);
+      // We continue since the push notification might still work, 
+      // but log the error
+    }
+
+    // 2. Fetch push tokens for target users
     const { data: tokens, error: tokensError } = await supabase
       .from('push_tokens')
       .select('user_id, expo_push_token')
@@ -118,12 +140,14 @@ serve(async (req: Request) => {
     }
 
     if (!tokens || tokens.length === 0) {
+      console.log('No push tokens found for specified users. Notifications saved to DB only.');
       return new Response(
         JSON.stringify({
-          error: 'No push tokens found for specified users',
+          message: 'Notifications saved to DB. No push tokens found.',
         }),
         {
-          status: 404,
+          // Return 200 instead of 404 because the primary action (DB save) succeeded
+          status: 200,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
@@ -149,7 +173,7 @@ serve(async (req: Request) => {
     if (validTokens.length === 0) {
       return new Response(
         JSON.stringify({
-          message: 'No users have push notifications enabled',
+          message: 'Notifications saved to DB. No users have push notifications enabled.',
         }),
         {
           status: 200,
@@ -202,24 +226,16 @@ serve(async (req: Request) => {
     const expoResult = await expoResponse.json();
     console.log('Expo push result:', expoResult);
 
-    // Save notifications to database
-    const notificationRecords = targetUserIds.map((userId) => ({
-      user_id: userId,
-      type: payload.type,
-      title: payload.title,
-      body: payload.body,
-      data: payload.data || {},
-      read: false,
-      created_at: new Date().toISOString(),
-      delivery_status: 'sent',
-    }));
-
-    const { error: insertError } = await supabase
+    // Update notification status to sent
+    const { error: updateError } = await supabase
       .from('notifications')
-      .insert(notificationRecords);
+      .update({ delivery_status: 'sent' })
+      .in('user_id', Array.from(enabledUserIds))
+      .eq('type', payload.type)
+      .eq('delivery_status', 'pending');
 
-    if (insertError) {
-      console.error('Failed to save notifications:', insertError);
+    if (updateError) {
+      console.error('Failed to update notifications status:', updateError);
     }
 
     return new Response(
@@ -227,6 +243,7 @@ serve(async (req: Request) => {
         success: true,
         sentCount: validTokens.length,
         details: expoResult,
+        database_inserted: !insertError
       }),
       {
         status: 200,

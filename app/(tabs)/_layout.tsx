@@ -10,7 +10,7 @@ import { NotificationBell } from '@/components/shared/NotificationBell';
 export default function TabLayout() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   // Initialize notifications when authenticated
   useNotifications();
 
@@ -43,49 +43,49 @@ export default function TabLayout() {
           tabBarActiveTintColor: colors.accent_green_bright,
           tabBarInactiveTintColor: colors.text_muted,
           tabBarLabelStyle: {
+            fontFamily: 'Poppins-Medium',
             fontSize: 11,
-            fontWeight: '600',
             marginTop: 4,
           },
           tabBarIconStyle: {
             marginTop: 4,
           },
         }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'AI',
-          tabBarIcon: ({ size, color }) => (
-            <Sparkles size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="discover"
-        options={{
-          title: 'Discover',
-          tabBarIcon: ({ size, color }) => (
-            <Compass size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="activity"
-        options={{
-          title: 'Activity',
-          tabBarIcon: ({ size, color }) => (
-            <Activity size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ size, color }) => <User size={size} color={color} />,
-        }}
-      />
-    </Tabs>
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'AI',
+            tabBarIcon: ({ size, color }) => (
+              <Sparkles size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="discover"
+          options={{
+            title: 'Discover',
+            tabBarIcon: ({ size, color }) => (
+              <Compass size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="activity"
+          options={{
+            title: 'Activity',
+            tabBarIcon: ({ size, color }) => (
+              <Activity size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ size, color }) => <User size={size} color={color} />,
+          }}
+        />
+      </Tabs>
     </>
   );
 }

@@ -24,7 +24,7 @@ interface SendNotificationOptions {
 async function sendNotification(options: SendNotificationOptions): Promise<boolean> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     const response = await fetch(NOTIFICATION_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -75,6 +75,35 @@ export async function sendLinkReceivedNotification(params: {
       linkType: params.linkType,
     },
     priority: 'high',
+  });
+}
+
+/**
+ * 🔗 Send Link Sent Notification (for the sender)
+ */
+export async function sendLinkSentNotification(params: {
+  senderId: string;
+  linkId: string;
+  recipientName: string;
+  recipientId: string;
+  houseName: string;
+  houseId: string;
+  linkType: 'business' | 'personal';
+}): Promise<boolean> {
+  return sendNotification({
+    userId: params.senderId,
+    type: 'link_sent',
+    title: '✅ Link Sent Automatically',
+    body: `Your business link was successfully sent to ${params.recipientName} in ${params.houseName}.`,
+    data: {
+      linkId: params.linkId,
+      recipientName: params.recipientName,
+      recipientId: params.recipientId,
+      houseName: params.houseName,
+      houseId: params.houseId,
+      linkType: params.linkType,
+    },
+    priority: 'normal',
   });
 }
 

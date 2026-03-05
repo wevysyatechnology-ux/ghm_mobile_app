@@ -50,12 +50,12 @@ export default function Profile() {
   // Get house and zone information
   const houseName = profile?.house?.house_name;
   const zoneName = profile?.zone;
-  
+
   // Category line: show house name if available, otherwise business category
   const categoryText = houseName || profile?.business_category || profile?.business || 'Not set';
-  
+
   // Location line: show zone if available, otherwise location
-  const locationText = zoneName || 
+  const locationText = zoneName ||
     [profile?.city, profile?.state, profile?.country]
       .filter(Boolean)
       .join(', ') || 'Not set';
@@ -126,14 +126,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.danger_red + '40',
     backgroundColor: colors.danger_red + '10',
   },
   logoutText: {
+    fontFamily: 'Poppins-Medium',
     color: colors.danger_red,
     fontSize: 16,
-    fontWeight: '600',
   },
 });

@@ -280,9 +280,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
+    fontFamily: 'Poppins-Bold',
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '700',
   },
   modalContainer: {
     flex: 1,
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border || 'rgba(255,255,255,0.1)',
   },
   modalTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    fontWeight: '700',
     color: theme.colors.text,
   },
   headerActions: {
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   markAllText: {
+    fontFamily: 'Poppins-Medium',
     color: theme.colors.primary,
     fontSize: 14,
-    fontWeight: '600',
   },
   closeButton: {
     width: 32,
@@ -344,12 +344,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 18,
-    fontWeight: '600',
     color: theme.colors.text,
     marginBottom: 8,
   },
   emptySubtext: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: theme.colors.textSecondary,
     textAlign: 'center',
@@ -386,17 +387,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: theme.colors.text,
     marginBottom: 4,
   },
   notificationBody: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   notificationTime: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: theme.colors.textSecondary,
     opacity: 0.7,

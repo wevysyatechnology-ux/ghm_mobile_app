@@ -104,8 +104,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   primaryButtonText: {
+    fontFamily: 'Poppins-Bold',
     fontSize: fontSize.sm,
-    fontWeight: '700',
     color: colors.bg_primary,
     flex: 1,
     letterSpacing: 0.2,
@@ -137,11 +137,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   textInput: {
+    fontFamily: 'Poppins-Medium',
     flex: 1,
     fontSize: fontSize.md,
     color: colors.text_primary,
     paddingVertical: spacing.sm,
-    fontWeight: '500',
   },
   micButton: {
     padding: spacing.md,

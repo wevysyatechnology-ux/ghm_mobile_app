@@ -57,16 +57,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   greeting: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 42,
-    fontWeight: '700',
     color: colors.text_primary,
     lineHeight: 50,
     letterSpacing: -0.5,
     marginBottom: spacing.xs,
   },
   userName: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 48,
-    fontWeight: '900',
     letterSpacing: -1,
     lineHeight: 56,
     color: colors.accent_green_bright,
@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent_green_bright,
   },
   badgeText: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 13,
-    fontWeight: '700',
     color: colors.accent_green_bright,
     letterSpacing: 0.5,
     textTransform: 'uppercase',

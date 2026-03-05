@@ -80,17 +80,19 @@ const styles = StyleSheet.create({
     borderColor: colors.bg_primary,
   },
   name: {
+    fontFamily: 'Poppins-Bold',
     fontSize: fontSize.xxl,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   category: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.md,
     color: colors.accent_green_bright,
     marginBottom: spacing.xs,
   },
   location: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
     marginBottom: spacing.md,
@@ -101,7 +103,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.button,
   },
   badgeText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.sm,
-    fontWeight: '600',
   },
 });
