@@ -37,6 +37,22 @@ export function getTranscribeEndpoint(): string {
 }
 
 /**
+ * Get the speak API endpoint (Deepgram Aura TTS)
+ */
+export function getSpeakEndpoint(): string {
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}/functions/v1/speak`;
+}
+
+/**
+ * Get the AI text analysis API endpoint (Deepgram Intelligence)
+ */
+export function getAnalyzeTextEndpoint(): string {
+  const baseUrl = getApiBaseUrl();
+  return `${baseUrl}/functions/v1/analyze-text`;
+}
+
+/**
  * Safe fetch wrapper with error handling
  */
 export async function fetchWithErrorHandling<T>(
@@ -48,11 +64,11 @@ export async function fetchWithErrorHandling<T>(
 
     if (!response.ok) {
       let errorMessage = 'Unknown error';
-      
+
       // Try to parse JSON error
       try {
         const errorData = await response.json();
-        
+
         // Handle different error response shapes from Edge Functions
         if (typeof errorData.error === 'string') {
           // Error is a string: { error: "message" }

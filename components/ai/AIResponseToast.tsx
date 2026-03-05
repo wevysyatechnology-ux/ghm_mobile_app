@@ -20,11 +20,11 @@ interface AIResponseToastProps {
   duration?: number;
 }
 
-export default function AIResponseToast({ 
-  message, 
-  visible, 
+export default function AIResponseToast({
+  message,
+  visible,
   onHide,
-  duration = 3000 
+  duration = 3000
 }: AIResponseToastProps) {
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
@@ -38,7 +38,7 @@ export default function AIResponseToast({
       const timer = setTimeout(() => {
         translateY.value = withTiming(-100, { duration: 400 });
         opacity.value = withTiming(0, { duration: 400 });
-        
+
         setTimeout(() => {
           onHide?.();
         }, 400);
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.sm,
     color: colors.text_primary,
-    fontWeight: '600',
+    fontFamily: 'Poppins-Medium',
     lineHeight: 20,
   },
 });

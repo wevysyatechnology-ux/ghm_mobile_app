@@ -135,17 +135,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   name: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   category: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
     marginBottom: spacing.xs,
   },
   location: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.xs,
     color: colors.text_secondary,
     marginBottom: spacing.sm,
@@ -157,8 +159,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.button,
   },
   badgeText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.xs,
-    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
@@ -173,8 +175,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.sm,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
   callButton: {

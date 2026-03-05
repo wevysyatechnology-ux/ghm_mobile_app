@@ -14,72 +14,36 @@ export const I2WEService = {
     const currentUserId = userData?.user?.id;
 
     try {
-      // Query profiles table directly for house members with their profile data
-      console.log('Fetching profiles for house_id:', houseId, 'currentUserId:', currentUserId);
+      console.log('Fetching profiles via RPC for house_id:', houseId, 'currentUserId:', currentUserId);
 
+      // Call the secure RPC function to bypass RLS on the profiles table
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          zone
-        `)
-        .eq('house_id', houseId)
-        .eq('approval_status', 'approved');
+        .rpc('get_house_members', { p_house_id: houseId });
 
       if (profilesError) {
-        console.error('Error fetching profiles with house_id:', profilesError);
+        console.error('Error fetching house members via RPC:', profilesError);
         throw profilesError;
       }
 
-      console.log('Profiles found:', profilesData?.length || 0, 'profiles:', profilesData);
+      console.log('Profiles found:', profilesData?.length || 0);
 
       if (!profilesData || profilesData.length === 0) {
         console.log('No members found for house:', houseId);
         return [];
       }
 
-      // Filter out current user and get their IDs
+      // Filter out current user
       const otherMembers = profilesData.filter((p: any) => p.id !== currentUserId);
-      const userIds = otherMembers.map((p: any) => p.id);
 
-      console.log('User IDs after filtering current user:', userIds);
-
-      if (userIds.length === 0) {
-        console.log('No other members in house after filtering current user');
-        return [];
-      }
-
-      // Fetch additional details from users_profile table if available
-      const { data: userProfiles } = await supabase
-        .from('users_profile')
-        .select('id, full_name, phone_number, business_category, city')
-        .in('id', userIds);
-
-      console.log('User profiles found in users_profile:', userProfiles?.length || 0);
-
-      // Create a map of users_profile data
-      const profileMap = new Map((userProfiles || []).map((p: any) => [p.id, p]));
-
-      // Merge data from both tables, preferring users_profile when available
-      const mergedProfiles = otherMembers.map((profile: any) => {
-        const userProfile = profileMap.get(profile.id);
-        return {
-          id: profile.id,
-          full_name: userProfile?.full_name || profile.full_name || 'Unknown',
-          phone_number: userProfile?.phone_number || null,
-          business_category: userProfile?.business_category || '',
-          city: userProfile?.city || profile.zone || '',
-        };
-      });
+      console.log('Members after filtering current user:', otherMembers.length);
 
       // Sort by full_name
-      const sortedProfiles = mergedProfiles.sort((a, b) => 
+      const sortedProfiles = otherMembers.sort((a: any, b: any) =>
         (a.full_name || '').localeCompare(b.full_name || '')
       );
 
-      console.log(`Loaded ${sortedProfiles.length} members for house ${houseId}`, sortedProfiles);
-      return sortedProfiles;
+      console.log(`Successfully loaded ${sortedProfiles.length} members for house ${houseId}`);
+      return sortedProfiles as UserProfile[];
     } catch (error) {
       console.error('Error in getHouseMembers:', error);
       throw error;

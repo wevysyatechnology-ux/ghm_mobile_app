@@ -1,13 +1,13 @@
-// Supabase Edge Function for secure OpenAI Whisper transcription
+// Supabase Edge Function for secure Deepgram transcription
 // Deploy with: supabase functions deploy transcribe
-// Environment variables needed: OPENAI_API_KEY
+// Environment variables needed: DEEPGRAM_API_KEY
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+const deepgramApiKey = Deno.env.get('DEEPGRAM_API_KEY');
 
-if (!openaiApiKey) {
-  throw new Error('Missing OPENAI_API_KEY environment variable');
+if (!deepgramApiKey) {
+  throw new Error('Missing DEEPGRAM_API_KEY environment variable');
 }
 
 // CORS headers for browser clients
@@ -20,7 +20,7 @@ const corsHeaders = {
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
+    return new Response(null, {
       status: 204,
       headers: corsHeaders,
     });
@@ -64,53 +64,57 @@ serve(async (req: Request) => {
       );
     }
 
-    // Create new FormData for OpenAI API
-    const openaiFormData = new FormData();
-    
-    // The audioFile is already a File/Blob from the client
-    openaiFormData.append('file', audioFile, 'audio.m4a');
-    openaiFormData.append('model', 'whisper-1');
-    openaiFormData.append('language', language);
+    // Deepgram API specific parameters
+    const url = new URL('https://api.deepgram.com/v1/listen');
+    url.searchParams.append('model', 'nova-2');
+    url.searchParams.append('smart_format', 'true');
+    // Deepgram currently prefers standard language codes (e.g. 'en', 'hi', etc.)
+    url.searchParams.append('language', language);
 
-    // Call OpenAI Whisper API
-    const openaiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    // Call Deepgram API
+    // We can send the raw file directly in the body
+    const deepgramResponse = await fetch(url.toString(), {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Token ${deepgramApiKey}`,
+        'Content-Type': (audioFile as File).type || 'audio/m4a',
       },
-      body: openaiFormData,
+      body: audioFile,
     });
 
-    if (!openaiResponse.ok) {
-      let errorMessage = `OpenAI API error: ${openaiResponse.status}`;
-      
+    if (!deepgramResponse.ok) {
+      let errorMessage = `Deepgram API error: ${deepgramResponse.status}`;
+
       try {
-        const errorData = await openaiResponse.json();
-        errorMessage = errorData.error?.message || errorMessage;
+        const errorText = await deepgramResponse.text();
+        errorMessage = `Deepgram API error: ${deepgramResponse.status} - ${errorText}`;
       } catch {
-        try {
-          const errorText = await openaiResponse.text();
-          errorMessage = errorText || errorMessage;
-        } catch {
-          // Use default message
-        }
+        // Use default message
       }
 
       return new Response(
         JSON.stringify({ error: errorMessage }),
         {
-          status: openaiResponse.status,
+          status: deepgramResponse.status,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
       );
     }
 
-    const data = await openaiResponse.json();
+    const data = await deepgramResponse.json();
 
-    // Return transcription
+    // Extract transcript from Deepgram response
+    let transcript = '';
+    try {
+      transcript = data.results?.channels[0]?.alternatives[0]?.transcript || '';
+    } catch (e) {
+      console.error("Error parsing deepgram response:", e);
+    }
+
+    // Return transcription (same format as before for frontend compatibility)
     return new Response(
       JSON.stringify({
-        text: data.text,
+        text: transcript,
       }),
       {
         status: 200,
@@ -119,7 +123,7 @@ serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('Transcribe function error:', error);
-    
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Internal server error',

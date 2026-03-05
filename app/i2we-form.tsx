@@ -8,9 +8,10 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { router } from 'expo-router';
 import { ChevronLeft, User, Calendar } from 'lucide-react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors, spacing } from '@/constants/theme';
 import { I2WEService } from '@/services/i2weService';
 import { LinksService } from '@/services/linksService';
@@ -25,11 +26,31 @@ export default function I2WEForm() {
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
   const [houses, setHouses] = useState<any[]>([]);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [formData, setFormData] = useState({
     meeting_date: '',
     notes: '',
   });
+
+  const minimumMeetingDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 1);
+    return date;
+  }, []);
+
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const minDateString = useMemo(
+    () => formatDateForInput(minimumMeetingDate),
+    [minimumMeetingDate]
+  );
 
   useEffect(() => {
     loadUserHouses();
@@ -63,6 +84,32 @@ export default function I2WEForm() {
     }
   };
 
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type !== 'set' || !selectedDate) {
+      return;
+    }
+
+    const selectedDateString = formatDateForInput(selectedDate);
+
+    if (selectedDateString < minDateString) {
+      Alert.alert('Invalid Date', 'Please select a future date.');
+      return;
+    }
+
+    setFormData((previous) => ({
+      ...previous,
+      meeting_date: selectedDateString,
+    }));
+
+    if (Platform.OS === 'ios') {
+      setShowDatePicker(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedMember) {
       Alert.alert('Error', 'Please select a house member');
@@ -71,6 +118,11 @@ export default function I2WEForm() {
 
     if (!formData.meeting_date) {
       Alert.alert('Error', 'Please select a meeting date');
+      return;
+    }
+
+    if (formData.meeting_date < minDateString) {
+      Alert.alert('Error', 'Please choose a future date for the meeting');
       return;
     }
 
@@ -162,17 +214,48 @@ export default function I2WEForm() {
         <Text style={styles.label}>
           Meeting Date <Text style={styles.required}>*</Text>
         </Text>
-        <View style={styles.dateInputContainer}>
-          <Calendar size={20} color={colors.text_secondary} />
-          <TextInput
-            style={styles.dateInput}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text_tertiary}
-            value={formData.meeting_date}
-            onChangeText={(text) => setFormData({ ...formData, meeting_date: text })}
+        {Platform.OS === 'web' ? (
+          <View style={styles.dateInputContainer}>
+            <Calendar size={20} color={colors.text_secondary} />
+            <input
+              type="date"
+              min={minDateString}
+              value={formData.meeting_date}
+              onChange={(event) => {
+                setFormData((previous) => ({
+                  ...previous,
+                  meeting_date: event.target.value,
+                }));
+              }}
+              style={styles.webDateInput as any}
+            />
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.dateInputContainer}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.8}>
+            <Calendar size={20} color={colors.text_secondary} />
+            <Text style={[styles.dateInput, !formData.meeting_date && styles.datePlaceholder]}>
+              {formData.meeting_date || 'Select meeting date'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {Platform.OS !== 'web' && showDatePicker && (
+          <DateTimePicker
+            value={
+              formData.meeting_date
+                ? new Date(`${formData.meeting_date}T00:00:00`)
+                : minimumMeetingDate
+            }
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            minimumDate={minimumMeetingDate}
+            onChange={handleDateChange}
           />
-        </View>
-        <Text style={styles.hint}>Format: YYYY-MM-DD (e.g., 2024-12-25)</Text>
+        )}
+        <Text style={styles.hint}>Only future dates are allowed</Text>
 
         <Text style={styles.label}>Meeting Notes</Text>
         <TextInput
@@ -317,13 +400,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text_primary,
   },
+  datePlaceholder: {
+    color: colors.text_tertiary,
+  },
+  webDateInput: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    outlineStyle: 'none',
+    color: colors.text_primary,
+    fontSize: 16,
+    height: 44,
+  },
   hint: {
     fontSize: 12,
     color: colors.text_tertiary,
     marginTop: spacing.xs,
   },
   submitButton: {
-    backgroundColor: colors.accent_blue,
+    backgroundColor: colors.accent_green_bright,
     borderRadius: 12,
     padding: spacing.lg,
     alignItems: 'center',

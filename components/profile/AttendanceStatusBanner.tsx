@@ -63,7 +63,7 @@ export default function AttendanceStatusBanner({ attendanceStatus, absenceCount 
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -78,11 +78,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
-    fontWeight: '700',
     flex: 1,
   },
   message: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     lineHeight: 20,
     color: '#A1A5A4',

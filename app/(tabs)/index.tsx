@@ -20,6 +20,9 @@ import { I2WEService } from '@/services/i2weService';
 import { voiceOS } from '@/services/voiceOSService';
 import { actionEngine } from '@/services/actionEngine';
 import { knowledgeService } from '@/services/knowledgeService';
+import { ActivityService } from '@/services/activityService';
+import ActivityFeedItem from '@/components/activity/ActivityFeedItem';
+import { Activity } from '@/types';
 
 export default function Home() {
   const { profile } = useAuth();
@@ -31,6 +34,7 @@ export default function Home() {
   const [linksReceivedCount, setLinksReceivedCount] = useState(0);
   const [closedDealsCount, setClosedDealsCount] = useState(0);
   const [meetingsCount, setMeetingsCount] = useState(0);
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     loadStats();
@@ -38,17 +42,19 @@ export default function Home() {
 
   const loadStats = async () => {
     try {
-      const [linksGiven, linksReceived, closedDeals, meetings] = await Promise.all([
+      const [linksGiven, linksReceived, closedDeals, meetings, activities] = await Promise.all([
         LinksService.getLinksGivenCount(),
         LinksService.getLinksReceivedCount(),
         DealsService.getClosedDealsCount(),
         I2WEService.getMeetingsCount(),
+        ActivityService.getRecentActivities(3),
       ]);
 
       setLinksGivenCount(linksGiven);
       setLinksReceivedCount(linksReceived);
       setClosedDealsCount(closedDeals);
       setMeetingsCount(meetings);
+      setRecentActivities(activities);
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -90,7 +96,7 @@ export default function Home() {
       // Show and speak the response
       setToastMessage(intent.response);
       setShowToast(true);
-      
+
       try {
         await voiceOS.speak(intent.response);
       } catch (speakError) {
@@ -114,16 +120,6 @@ export default function Home() {
   };
 
   const handleMicPress = async () => {
-    // Check if running on web - voice recording has limited support
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Voice Input Not Available on Web',
-        'Voice recording works best on mobile devices. Please use the text input instead, or test on a physical device/simulator.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     try {
       setOrbState('listening');
       console.log('🎤 Starting voice recording...');
@@ -141,7 +137,7 @@ export default function Home() {
           // Transcribe audio using Whisper
           const transcript = await voiceOS.stopRecordingAndTranscribe();
           console.log('📝 Transcribed:', transcript);
-          
+
           if (!transcript || transcript.trim().length === 0) {
             throw new Error('No speech detected');
           }
@@ -164,7 +160,7 @@ export default function Home() {
           // Show and speak the response
           setToastMessage(intent.response);
           setShowToast(true);
-          
+
           try {
             await voiceOS.speak(intent.response);
           } catch (speakError) {
@@ -182,7 +178,7 @@ export default function Home() {
         } catch (error) {
           console.error('❌ Voice processing error:', error);
           setOrbState('idle');
-          
+
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           setToastMessage(`Voice processing failed: ${errorMessage}. Please try text input instead.`);
           setShowToast(true);
@@ -241,7 +237,7 @@ export default function Home() {
     } catch (error) {
       console.error('❌ Text processing error:', error);
       setOrbState('idle');
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setToastMessage(`Processing failed: ${errorMessage}. Please check your connection and try again.`);
       setShowToast(true);
@@ -343,12 +339,18 @@ export default function Home() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No recent activity yet</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Start sending links and making deals
-            </Text>
-          </View>
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity) => (
+              <ActivityFeedItem key={activity.id} activity={activity} />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No recent activity yet</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Start sending links and making deals
+              </Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -388,19 +390,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   greeting: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 32,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: spacing.sm,
     lineHeight: 40,
     marginTop: spacing.md,
   },
   name: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 40,
-    fontWeight: '900',
     letterSpacing: -1,
   },
   subtitle: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_muted,
     marginTop: spacing.xs,
@@ -430,8 +433,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   actionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
-    fontWeight: '700',
     color: colors.text_primary,
     textAlign: 'center',
   },
@@ -455,12 +458,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   statValue: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   statLabel: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: colors.text_muted,
     textAlign: 'center',
@@ -476,13 +480,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 22,
-    fontWeight: '700',
     color: colors.text_primary,
   },
   seeAll: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 15,
-    fontWeight: '600',
     color: colors.accent_green_bright,
   },
   emptyState: {
@@ -494,12 +498,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border_secondary,
   },
   emptyStateText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text_secondary,
     marginBottom: spacing.xs,
   },
   emptyStateSubtext: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_muted,
     textAlign: 'center',
@@ -516,8 +521,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 211, 153, 0.3)',
   },
   discoverButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.accent_green_bright,
     marginRight: spacing.xs,
   },
@@ -526,8 +531,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   aiSectionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 18,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: spacing.md,
   },

@@ -5,7 +5,7 @@ import { ChevronLeft, User, Flame } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
-import { sendLinkReceivedNotification } from '@/utils/notificationHelpers';
+import { sendLinkReceivedNotification, sendLinkSentNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LinksForm() {
@@ -54,7 +54,7 @@ export default function LinksForm() {
       const members = await LinksService.getHouseMembers(selectedHouse.id);
       console.log('Loaded members:', members.length);
       setHouseMembers(members);
-      
+
       if (members.length === 0) {
         Alert.alert(
           'No Members Found',
@@ -98,11 +98,23 @@ export default function LinksForm() {
 
       // Send notification to the recipient
       if (profile && selectedHouse) {
+        // Notify Receiver
         await sendLinkReceivedNotification({
           recipientId: selectedMember.id,
           linkId: result?.id || '',
           senderName: profile.full_name || 'A member',
           senderId: profile.id,
+          houseName: selectedHouse.house_name || 'Your House',
+          houseId: selectedHouse.id,
+          linkType: 'business',
+        });
+
+        // Notify Sender
+        await sendLinkSentNotification({
+          senderId: profile.id,
+          linkId: result?.id || '',
+          recipientName: selectedMember.full_name || 'A member',
+          recipientId: selectedMember.id,
           houseName: selectedHouse.house_name || 'Your House',
           houseId: selectedHouse.id,
           linkType: 'business',
@@ -285,8 +297,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   headerTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    fontWeight: '700',
     color: colors.text_primary,
   },
   scrollView: {
@@ -297,8 +309,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   label: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
-    fontWeight: '600',
     color: colors.text_secondary,
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
@@ -308,8 +320,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: spacing.md,
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_primary,
     borderWidth: 1,
@@ -329,19 +342,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   pickerText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_secondary,
     marginLeft: spacing.md,
   },
   memberList: {
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     marginTop: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -353,12 +367,13 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   memberName: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   memberDetails: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_tertiary,
   },
@@ -374,22 +389,23 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   submitButton: {
-    backgroundColor: colors.accent_blue,
-    borderRadius: 12,
+    backgroundColor: colors.accent_green_bright,
+    borderRadius: 16,
     padding: spacing.lg,
     alignItems: 'center',
     marginTop: spacing.xxl,
   },
   submitButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text_primary,
+    color: colors.bg_primary,
   },
   emptyMemberList: {
     padding: spacing.lg,
     alignItems: 'center',
   },
   emptyMemberText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_tertiary,
     textAlign: 'center',

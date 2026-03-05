@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.md,
   },
@@ -78,12 +78,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.md,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   description: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
   },

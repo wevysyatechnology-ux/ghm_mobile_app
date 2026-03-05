@@ -13,7 +13,7 @@ export interface User {
 
 export interface Activity {
   id: string;
-  type: 'deal' | 'i2we' | 'visitor' | 'meeting' | 'suggestion';
+  type: 'deal' | 'i2we' | 'visitor' | 'meeting' | 'suggestion' | 'link';
   title: string;
   message: string;
   timestamp: string;

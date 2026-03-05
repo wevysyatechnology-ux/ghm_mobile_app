@@ -477,13 +477,14 @@ const styles = StyleSheet.create({
     height: 75,
   },
   title: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 32,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_muted,
     textAlign: 'center',
@@ -501,15 +502,15 @@ const styles = StyleSheet.create({
   toggleButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
   },
   toggleButtonActive: {
     backgroundColor: colors.accent_green_bright,
   },
   toggleText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text_muted,
   },
   toggleTextActive: {
@@ -525,6 +526,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    fontFamily: 'Poppins-Regular',
     fontSize: 18,
     color: colors.text_primary,
     textAlign: 'center',
@@ -540,11 +542,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 18,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
   errorText: {
+    fontFamily: 'Poppins-Regular',
     color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
@@ -552,18 +555,19 @@ const styles = StyleSheet.create({
   },
   switchButton: {
     backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginBottom: 16,
     alignSelf: 'center',
   },
   switchButtonText: {
+    fontFamily: 'Poppins-Medium',
     color: colors.accent_green_bright,
     fontSize: 13,
-    fontWeight: '600',
   },
   infoText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_muted,
     textAlign: 'center',
@@ -578,10 +582,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 211, 153, 0.3)',
   },
   devHintText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 13,
     color: colors.accent_green_bright,
     textAlign: 'center',
-    fontWeight: '600',
   },
   signupPrompt: {
     flexDirection: 'row',
@@ -591,12 +595,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signupText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_muted,
   },
   signupLink: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
-    fontWeight: '600',
     color: colors.accent_green_bright,
   },
 });
