@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone_number?: string | null;
   category: string;
   location: string;
   circle: 'inner' | 'open';

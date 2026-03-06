@@ -16,7 +16,7 @@ import { colors, spacing } from '@/constants/theme';
 import { I2WEService } from '@/services/i2weService';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
-import { sendI2WEMeetingScheduledNotification } from '@/utils/notificationHelpers';
+import { sendI2WEMeetingRecordedNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function I2WEForm() {
@@ -33,10 +33,9 @@ export default function I2WEForm() {
     notes: '',
   });
 
-  const minimumMeetingDate = useMemo(() => {
+  const maximumMeetingDate = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 1);
     return date;
   }, []);
 
@@ -47,9 +46,9 @@ export default function I2WEForm() {
     return `${year}-${month}-${day}`;
   };
 
-  const minDateString = useMemo(
-    () => formatDateForInput(minimumMeetingDate),
-    [minimumMeetingDate]
+  const maxDateString = useMemo(
+    () => formatDateForInput(maximumMeetingDate),
+    [maximumMeetingDate]
   );
 
   useEffect(() => {
@@ -95,8 +94,8 @@ export default function I2WEForm() {
 
     const selectedDateString = formatDateForInput(selectedDate);
 
-    if (selectedDateString < minDateString) {
-      Alert.alert('Invalid Date', 'Please select a future date.');
+    if (selectedDateString > maxDateString) {
+      Alert.alert('Invalid Date', 'Please select today or a past date.');
       return;
     }
 
@@ -121,8 +120,8 @@ export default function I2WEForm() {
       return;
     }
 
-    if (formData.meeting_date < minDateString) {
-      Alert.alert('Error', 'Please choose a future date for the meeting');
+    if (formData.meeting_date > maxDateString) {
+      Alert.alert('Error', 'Please choose today or a past date for the meeting');
       return;
     }
 
@@ -135,11 +134,11 @@ export default function I2WEForm() {
 
       // Send notification to the selected member
       if (profile) {
-        await sendI2WEMeetingScheduledNotification({
+        await sendI2WEMeetingRecordedNotification({
           recipientId: selectedMember.id,
           meetingId: result?.id || '',
-          schedulerName: profile.full_name || 'A member',
-          schedulerId: profile.id,
+          recorderName: profile.full_name || 'A member',
+          recorderId: profile.id,
           meetingDate: formData.meeting_date,
           notes: formData.notes,
         });
@@ -152,14 +151,14 @@ export default function I2WEForm() {
       });
       setSelectedMember(null);
 
-      Alert.alert('Success', 'Meeting scheduled successfully', [
+      Alert.alert('Success', 'Meeting recorded successfully', [
         {
           text: 'OK',
           onPress: () => router.replace('/(tabs)'),
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to schedule meeting');
+      Alert.alert('Error', 'Failed to record meeting');
     }
   };
 
@@ -169,7 +168,7 @@ export default function I2WEForm() {
         <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schedule I2WE Meeting</Text>
+        <Text style={styles.headerTitle}>Log I2WE Meeting</Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -219,7 +218,7 @@ export default function I2WEForm() {
             <Calendar size={20} color={colors.text_secondary} />
             <input
               type="date"
-              min={minDateString}
+              max={maxDateString}
               value={formData.meeting_date}
               onChange={(event) => {
                 setFormData((previous) => ({
@@ -247,15 +246,15 @@ export default function I2WEForm() {
             value={
               formData.meeting_date
                 ? new Date(`${formData.meeting_date}T00:00:00`)
-                : minimumMeetingDate
+                : maximumMeetingDate
             }
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={minimumMeetingDate}
+            maximumDate={maximumMeetingDate}
             onChange={handleDateChange}
           />
         )}
-        <Text style={styles.hint}>Only future dates are allowed</Text>
+        <Text style={styles.hint}>Only today or past dates are allowed</Text>
 
         <Text style={styles.label}>Meeting Notes</Text>
         <TextInput
@@ -269,7 +268,7 @@ export default function I2WEForm() {
         />
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Schedule Meeting</Text>
+          <Text style={styles.submitButtonText}>Save Meeting</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

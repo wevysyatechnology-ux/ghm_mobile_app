@@ -63,19 +63,47 @@ export default function Activity() {
           )
         );
 
-        if (meetingMemberIds.length > 0) {
+        const dealMemberIds = Array.from(
+          new Set(
+            myDeals
+              .flatMap((deal) => [deal.from_member_id, deal.to_member_id, deal.creator_id])
+              .filter(Boolean)
+          )
+        );
+
+        const profileIdsToLoad = Array.from(new Set([...meetingMemberIds, ...dealMemberIds]));
+        if (profileIdsToLoad.length > 0) {
+          const combinedNameMap: Record<string, string> = {};
+
+          // First try direct profile lookup (works for current user and when RLS allows).
           const { data: profileRows, error } = await supabase
             .from('profiles')
             .select('id, full_name')
-            .in('id', meetingMemberIds);
+            .in('id', profileIdsToLoad);
 
           if (!error && profileRows) {
-            const profileNameMap = profileRows.reduce<Record<string, string>>((accumulator, row) => {
-              accumulator[row.id] = row.full_name || 'Member';
-              return accumulator;
-            }, {});
-            setMemberNames(profileNameMap);
+            for (const row of profileRows) {
+              if (row.id && row.full_name) {
+                combinedNameMap[row.id] = row.full_name;
+              }
+            }
           }
+
+          // Fallback to secure house-members RPC for IDs hidden by profile RLS.
+          const unresolvedIds = profileIdsToLoad.filter((id) => !combinedNameMap[id]);
+          if (unresolvedIds.length > 0) {
+            const houses = await LinksService.getUserHouses().catch(() => []);
+            for (const house of houses) {
+              const members = await LinksService.getHouseMembers(house.id).catch(() => []);
+              for (const member of members) {
+                if (member.id && member.full_name) {
+                  combinedNameMap[member.id] = member.full_name;
+                }
+              }
+            }
+          }
+
+          setMemberNames(combinedNameMap);
         } else {
           setMemberNames({});
         }
@@ -281,8 +309,15 @@ export default function Activity() {
 
                         {expandedDeals[deal.id] && (
                           <View style={styles.detailContent}>
-                            <Text style={styles.detailLine}>Status: {deal.status}</Text>
-                            <Text style={styles.detailLine}>Type: {deal.deal_type}</Text>
+                            <Text style={styles.detailLine}>
+                              From:{' '}
+                              {deal.deal_type === 'wevysya_deal'
+                                ? 'WeVysya'
+                                : getMemberName(deal.from_member_id || '')}
+                            </Text>
+                            <Text style={styles.detailLine}>
+                              To: {getMemberName(deal.to_member_id || deal.creator_id)}
+                            </Text>
                             <Text style={styles.detailLine}>
                               Description: {deal.description || 'No description'}
                             </Text>

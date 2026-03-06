@@ -8,8 +8,8 @@ export const colors = {
   text_tertiary: '#9CA3AF',
   accent: '#317559', // Eucalyptus Green
   accent_green: '#045C00', // Deep Forest Green
-  accent_green_bright: '#317559', // Eucalyptus Green
-  accent_green_glow: '#317559', // Eucalyptus Green
+  accent_green_bright: '#34D399', // Vibrant Mint Green
+  accent_green_glow: '#6EE7B7', // Soft Mint Glow
   accent_muted: '#14231f', // Abyssal Teal
   accent_blue: '#3B82F6',
   accent_red: '#EF4444',

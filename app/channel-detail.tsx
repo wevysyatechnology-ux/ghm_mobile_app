@@ -106,6 +106,19 @@ export default function ChannelDetailScreen() {
     setMeetings([]);
   };
 
+  const getDisplayDescription = (targetChannel: Channel) => {
+    const normalizedSlug = (targetChannel.slug || '').toLowerCase();
+    const normalizedName = (targetChannel.name || '').toLowerCase();
+    const isI2WEChannel =
+      normalizedSlug.includes('i2we') ||
+      normalizedSlug.includes('12we') ||
+      normalizedSlug.includes('meeting') ||
+      normalizedName.includes('i2we') ||
+      normalizedName.includes('meeting');
+
+    return isI2WEChannel ? 'Track one-on-one meetings' : targetChannel.description;
+  };
+
   useEffect(() => {
     if (!channel?.id || getChannelType(channel.slug) !== 'posts') return;
 
@@ -243,7 +256,7 @@ export default function ChannelDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.descriptionCard}>
-          <Text style={styles.description}>{channel.description}</Text>
+          <Text style={styles.description}>{getDisplayDescription(channel)}</Text>
         </View>
 
         {showCreatePost && getChannelType(channel.slug) === 'posts' && (
@@ -373,7 +386,6 @@ export default function ChannelDetailScreen() {
                   <View key={deal.id} style={styles.postCard}>
                     <Text style={styles.postTitle}>{deal.title}</Text>
                     <Text style={styles.postContent}>Amount: ₹{deal.amount}</Text>
-                    <Text style={styles.postContent}>Status: {deal.status}</Text>
                     <Text style={styles.postDate}>
                       {new Date(deal.created_at).toLocaleDateString()}
                     </Text>

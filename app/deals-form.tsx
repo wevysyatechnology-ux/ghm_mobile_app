@@ -67,6 +67,7 @@ export default function DealsForm() {
     }
 
     const isWeVysyaDeal = selectedMember.id === 'wevysya';
+    const fromMemberId = isWeVysyaDeal ? null : selectedMember.id;
 
     try {
       const result = await DealsService.createDeal({
@@ -74,6 +75,7 @@ export default function DealsForm() {
         description: formData.description,
         amount: parseFloat(formData.amount),
         deal_type: isWeVysyaDeal ? 'wevysya_deal' : 'house_deal',
+        from_member_id: fromMemberId,
       });
 
       // Send notification to the member (if not WeVysya deal)
@@ -120,7 +122,7 @@ export default function DealsForm() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.label}>
-          Send to <Text style={styles.required}>*</Text>
+          Received from <Text style={styles.required}>*</Text>
         </Text>
         <TouchableOpacity
           style={styles.picker}

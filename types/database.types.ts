@@ -171,10 +171,12 @@ export type Database = {
           creator_id: string
           deal_type: string
           description: string | null
+          from_member_id: string | null
           house_id: string | null
           id: string
           status: string | null
           title: string
+          to_member_id: string | null
         }
         Insert: {
           amount?: number | null
@@ -182,10 +184,12 @@ export type Database = {
           creator_id: string
           deal_type: string
           description?: string | null
+          from_member_id?: string | null
           house_id?: string | null
           id?: string
           status?: string | null
           title: string
+          to_member_id?: string | null
         }
         Update: {
           amount?: number | null
@@ -193,17 +197,33 @@ export type Database = {
           creator_id?: string
           deal_type?: string
           description?: string | null
+          from_member_id?: string | null
           house_id?: string | null
           id?: string
           status?: string | null
           title?: string
+          to_member_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "core_deals_from_member_id_fkey"
+            columns: ["from_member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "core_deals_house_id_fkey"
             columns: ["house_id"]
             isOneToOne: false
             referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_deals_to_member_id_fkey"
+            columns: ["to_member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
