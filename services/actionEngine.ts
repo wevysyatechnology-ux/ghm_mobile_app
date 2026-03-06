@@ -14,7 +14,7 @@ export interface Intent {
     parameters: Record<string, any>;
     screen?: string;
   };
-  response: string;
+  response: string; // The text spoken back to the user
   confidence: number;
 }
 
@@ -89,6 +89,12 @@ class ActionEngine {
       screen: '/(tabs)/activity',
       description: 'View recent activity',
     });
+
+    // Database query actions
+    this.actionMap.set('query_house_members', {
+      handler: this.queryHouseMembers,
+      description: 'Query the database for the number of members in the user\'s house',
+    });
   }
 
   /**
@@ -138,7 +144,7 @@ class ActionEngine {
         }
       }
 
-      console.log('✅ Intent classified:', intent.type, intent.category);
+      console.log('✅ Intent classified from backend:', intent.type, intent.category);
       return intent;
     } catch (error) {
       console.error('❌ Intent classification failed:', error);
@@ -148,9 +154,105 @@ class ActionEngine {
   }
 
   /**
-   * Fallback intent classification using keywords
+   * Ultra-fast local intent classification using regex/keywords
+   * Bypasses OpenAI completely for common commands
+   */
+  fastLocalClassification(query: string): Intent | null {
+    const lowerQuery = query.toLowerCase();
+
+    // 1. Profile actions
+    if (/show.*profile|open.*profile|my.*profile|view.*profile/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'view_profile',
+        action: { name: 'view_profile', parameters: {}, screen: '/(tabs)/profile' },
+        response: 'Opening your profile.',
+        confidence: 0.95,
+      };
+    }
+
+    // 2. Deals actions
+    if (/post.*deal|create.*deal|add.*deal/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'post_deal',
+        action: { name: 'post_deal', parameters: {}, screen: '/deals-form' },
+        response: 'Opening the deal creation form.',
+        confidence: 0.95,
+      };
+    }
+    if (/show.*deals|view.*deals|open.*deals/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'view_deals',
+        action: { name: 'view_deals', parameters: {}, screen: '/(tabs)/activity' },
+        response: 'Showing the latest deals.',
+        confidence: 0.95,
+      };
+    }
+
+    // 3. Activity / Home actions
+    if (/show.*activity|view.*activity|open.*activity/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'view_activity',
+        action: { name: 'view_activity', parameters: {}, screen: '/(tabs)/activity' },
+        response: 'Opening your recent activity.',
+        confidence: 0.95,
+      };
+    }
+
+    // 4. House members query
+    if (/how many.*members.*(my|in).*house|members.*in.*my.*house/.test(lowerQuery)) {
+      return {
+        type: 'action', // using action to trigger our logic
+        category: 'query_house_members',
+        action: { name: 'query_house_members', parameters: {} },
+        response: 'Let me check the database for your house members.',
+        confidence: 0.95,
+      };
+    }
+
+    // 5. Connect / Link actions
+    if (/send.*link|give.*link|create.*link/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'send_link',
+        action: { name: 'send_link', parameters: {}, screen: '/links-form' },
+        response: 'Opening the link request form.',
+        confidence: 0.90,
+      };
+    }
+    if (/create.*i2we|start.*i2we/.test(lowerQuery)) {
+      return {
+        type: 'action',
+        category: 'create_i2we',
+        action: { name: 'create_i2we', parameters: {}, screen: '/i2we-form' },
+        response: 'Opening the i2we creation form.',
+        confidence: 0.90,
+      };
+    }
+
+    // 6. Generic search (we let the backend handle complex role/city searches, but catch basic ones)
+    if (/search.*member|find.*member/.test(lowerQuery) && lowerQuery.length < 25) {
+      return {
+        type: 'action',
+        category: 'search_member',
+        action: { name: 'search_member', parameters: {}, screen: '/(tabs)/discover' },
+        response: 'Taking you to member search.',
+        confidence: 0.8,
+      };
+    }
+
+    return null; // No high-confidence local match, try backend
+  }
+
+  /**
+   * Safe fallback intent classification using keywords if backend fails
    */
   private fallbackIntentClassification(query: string): Intent {
+    const localMatch = this.fastLocalClassification(query);
+    if (localMatch) return localMatch;
     const lowerQuery = query.toLowerCase();
 
     // Check for action keywords
@@ -258,6 +360,69 @@ class ActionEngine {
     } catch (error) {
       console.error('❌ Search members failed:', error);
       return { success: false, error };
+    }
+  }
+
+  /**
+   * Database Query Actions
+   */
+  private async queryHouseMembers(params: any): Promise<any> {
+    try {
+      // 1. First we need to get the current user's profile to find their house_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return {
+          success: false,
+          spokenResponse: "I cannot check house members. You are not logged in."
+        };
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('users_profile')
+        .select('house_id, house_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        return {
+          success: false,
+          spokenResponse: "I couldn't find your profile information to look up your house."
+        };
+      }
+
+      const houseId = profile.house_id;
+      const houseName = profile.house_name || 'your house';
+
+      if (!houseId) {
+        return {
+          success: false,
+          spokenResponse: "You don't appear to be assigned to a house yet."
+        };
+      }
+
+      // 2. Query the database for the exact count of members with this house_id
+      const { count, error: countError } = await supabase
+        .from('users_profile')
+        .select('*', { count: 'exact', head: true })
+        .eq('house_id', houseId);
+
+      if (countError) {
+        return {
+          success: false,
+          spokenResponse: "Sorry, I had trouble counting the members in your house."
+        };
+      }
+
+      const memberCount = count || 0;
+
+      return {
+        success: true,
+        // Override the spoken response with the dynamic data result
+        spokenResponse: `There are ${memberCount} members currently registered in ${houseName}.`,
+      };
+    } catch (error) {
+      console.error('❌ Query house members failed:', error);
+      return { success: false, spokenResponse: "I encountered an error while safely checking the database." };
     }
   }
 

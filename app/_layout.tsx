@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AIProvider } from '@/contexts/AIContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import GlobalVoiceControl from '@/components/ai/GlobalVoiceControl';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -63,6 +64,7 @@ export default function RootLayout() {
           <Stack.Screen name="call" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
+        <GlobalVoiceControl />
         <StatusBar style="light" />
       </AIProvider>
     </AuthProvider>

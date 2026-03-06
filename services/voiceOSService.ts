@@ -196,43 +196,54 @@ class VoiceOSService {
         };
       }
 
-      // Optional: Deepgram Intelligence Analysis (Intent & Sentiment)
-      try {
-        const analyzeEndpoint = getAnalyzeTextEndpoint();
-        const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-        const analyzeResponse = await fetch(analyzeEndpoint, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ text: transcript }),
-        });
+      // Check local intent classification first for ultra-fast response
+      let intent = actionEngine.fastLocalClassification(transcript);
+      let relevantContext = '';
 
-        if (analyzeResponse.ok) {
-          const analysis = await analyzeResponse.json();
-          console.log('📊 Deepgram Intelligence:', analysis);
-          // You could store this analysis for user sentiment tracking in the DB
+      // If local regex didn't catch it, hit the backend OpenAI
+      if (!intent) {
+        // Step 1: Classify bare intent to see if it even NEEDS a long RAG lookup
+        // By passing empty context, we save the first DB hit if it's just an action
+        intent = await actionEngine.classifyIntent(transcript, '');
+
+        // If GPT says it's a knowledge query, THEN we do the slow RAG search
+        if (intent.type === 'knowledge') {
+          console.log('📚 Fetching RAG context for knowledge query...');
+          relevantContext = await knowledgeService.searchKnowledge(transcript);
         }
-      } catch (analysisErr) {
-        console.warn('⚠️ Deepgram Intelligence analysis failed (non-blocking):', analysisErr);
       }
 
-      // Step 1: Search knowledge base for relevant context (RAG)
-      const relevantContext = await knowledgeService.searchKnowledge(transcript);
+      console.log('🎯 Final Intent:', intent.type, intent.category);
 
-      // Step 2: Classify intent and determine action
-      const intent = await actionEngine.classifyIntent(transcript, relevantContext);
-
-      // Step 3: Generate response
       let response: string;
 
       if (intent.type === 'knowledge') {
-        // Knowledge question - use RAG
+        // Knowledge question - generate GPT response with context
         response = await this.generateKnowledgeResponse(transcript, relevantContext);
       } else {
-        // Action command - execute and respond
+        // Action command
         response = intent.response || 'I\'ll help you with that.';
+
+        // --- LATENCY REDUCTION: EXECUTE DATA QUERIES IMMEDIATELY ---
+        // If the action is a database query (e.g. how many members in my house),
+        // we execute the query RIGHT NOW before we trigger the TTS, 
+        // and we overwrite the generic "I'll do that" text with the actual DB result.
+        if (intent.action?.name.startsWith('query_')) {
+          try {
+            console.log('⚡ Executing dynamic data query before speaking...');
+            const result = await actionEngine.executeAction(intent);
+
+            if (result && result.spokenResponse) {
+              response = result.spokenResponse;
+              console.log('🗣️ Overriding response with dynamically generated DB text:', response);
+            }
+
+            // Prevent it from trying to navigate or re-execute later since we just did it
+            intent.action.name = 'resolved_query';
+          } catch (e) {
+            console.error('Data query execution failed:', e);
+          }
+        }
       }
 
       return {
@@ -240,7 +251,7 @@ class VoiceOSService {
         intent: intent.type,
         action: intent.action,
         response,
-        shouldExecute: intent.type === 'action',
+        shouldExecute: intent.type === 'action' && intent.action?.name !== 'resolved_query',
       };
     } catch (error) {
       console.error('❌ Command processing failed:', error);
