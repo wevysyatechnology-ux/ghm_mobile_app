@@ -30,6 +30,7 @@ export default function Discover() {
           id: member.id,
           name: member.full_name || 'Member',
           email: '',
+          phone_number: member.phone_number,
           category: member.business_category || 'Business',
           location: [member.city, member.state].filter(Boolean).join(', ') || 'Location not set',
           circle: member.vertical_type === 'inner_circle' ? 'inner' : 'open',

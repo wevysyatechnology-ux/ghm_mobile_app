@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking } from 'react-native';
 import { Phone, User as UserIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { colors, spacing, fontSize, borderRadius } from '@/constants/theme';
@@ -10,17 +10,44 @@ interface MemberCardProps {
 
 export default function MemberCard({ member }: MemberCardProps) {
   const router = useRouter();
-  const canCall = member.circle === 'inner';
+  const phoneNumber = member.phone_number?.trim() || '';
+  const canCall = phoneNumber.length > 0;
 
-  const handleCall = () => {
-    if (canCall) {
-      router.push({
-        pathname: '/call',
-        params: {
-          name: member.name,
-          photo: member.profile_photo || '',
-        },
-      });
+  const handleViewProfile = () => {
+    router.push({
+      pathname: '/member-profile',
+      params: {
+        id: member.id,
+        name: member.name,
+        category: member.category,
+        location: member.location,
+        circle: member.circle,
+        tier: member.tier,
+        phone_number: phoneNumber,
+        profile_photo: member.profile_photo || '',
+      },
+    });
+  };
+
+  const handleCall = async () => {
+    if (!canCall) {
+      Alert.alert('Phone unavailable', 'No phone number is available for this member.');
+      return;
+    }
+
+    const dialableNumber = phoneNumber.replace(/\s+/g, '');
+    const dialUrl = `tel:${dialableNumber}`;
+
+    try {
+      const supported = await Linking.canOpenURL(dialUrl);
+      if (!supported) {
+        Alert.alert('Unable to call', 'Dialer is not available on this device.');
+        return;
+      }
+
+      await Linking.openURL(dialUrl);
+    } catch {
+      Alert.alert('Unable to call', 'Could not open the phone dialer.');
     }
   };
 
@@ -71,6 +98,7 @@ export default function MemberCard({ member }: MemberCardProps) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.viewButton}
+          onPress={handleViewProfile}
           activeOpacity={0.7}>
           <Text style={styles.viewButtonText}>View Profile</Text>
         </TouchableOpacity>

@@ -150,7 +150,7 @@ export default function LinksForm() {
         <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Links Form</Text>
+        <Text style={styles.headerTitle}>Link Form</Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>

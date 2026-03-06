@@ -220,6 +220,33 @@ export async function sendI2WEMeetingScheduledNotification(params: {
 }
 
 /**
+ * 📅 Send I2WE Meeting Recorded Notification
+ */
+export async function sendI2WEMeetingRecordedNotification(params: {
+  recipientId: string;
+  meetingId: string;
+  recorderName: string;
+  recorderId: string;
+  meetingDate: string;
+  notes?: string;
+}): Promise<boolean> {
+  return sendNotification({
+    userId: params.recipientId,
+    type: 'i2we_meeting_recorded',
+    title: '✅ I2WE Meeting Recorded',
+    body: `${params.recorderName} recorded a completed 1-on-1 meeting with you on ${params.meetingDate}.`,
+    data: {
+      meetingId: params.meetingId,
+      recorderName: params.recorderName,
+      recorderId: params.recorderId,
+      meetingDate: params.meetingDate,
+      notes: params.notes,
+    },
+    priority: 'normal',
+  });
+}
+
+/**
  * 🤝 Send AI Match Suggestion Notification
  */
 export async function sendAIMatchSuggestionNotification(params: {

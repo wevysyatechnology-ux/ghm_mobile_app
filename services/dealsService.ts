@@ -6,6 +6,7 @@ export interface CreateDealData {
   description?: string;
   amount: number;
   deal_type?: 'house_deal' | 'wevysya_deal' | null;
+  from_member_id?: string | null;
 }
 
 export const DealsService = {
@@ -36,6 +37,8 @@ export const DealsService = {
         .from('core_deals')
         .insert({
           creator_id: userData.user.id,
+          to_member_id: userData.user.id,
+          from_member_id: dealData.from_member_id || null,
           house_id: houseId,
           title: dealData.title,
           description: dealData.description || null,
@@ -101,10 +104,19 @@ export const DealsService = {
         deal_id,
         core_deals (*)
       `)
-      .eq('user_id', userData.user.id);
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false, foreignTable: 'core_deals' });
 
     if (error) throw error;
-    return data?.map((item: any) => item.core_deals) || [];
+
+    // Keep latest entries first even if join ordering is inconsistent.
+    const deals = data?.map((item: any) => item.core_deals).filter(Boolean) || [];
+    deals.sort(
+      (a: CoreDeal, b: CoreDeal) =>
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
+
+    return deals;
   },
 
   async joinDeal(dealId: string): Promise<void> {

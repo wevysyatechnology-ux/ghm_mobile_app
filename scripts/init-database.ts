@@ -26,7 +26,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function initDatabase() {
-  console.log('🚀 Initializing Wevysya database...\n');
+  console.log('🚀 Initializing WeVysya database...\n');
 
   try {
     const { data: tables, error: checkError } = await supabase

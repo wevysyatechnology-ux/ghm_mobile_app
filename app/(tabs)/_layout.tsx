@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Platform, View, StyleSheet } from 'react-native';
 import { Sparkles, Compass, Activity, User } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -9,7 +10,13 @@ import { NotificationBell } from '@/components/shared/NotificationBell';
 
 export default function TabLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading } = useAuth();
+
+  const androidExtraBottom = Platform.OS === 'android' ? 12 : 0;
+  const tabBarPaddingBottom =
+    Platform.OS === 'web' ? 18 : Math.max(insets.bottom, 8) + androidExtraBottom;
+  const tabBarHeight = 64 + tabBarPaddingBottom;
 
   // Initialize notifications when authenticated
   useNotifications();
@@ -28,15 +35,16 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          tabBarHideOnKeyboard: true,
           tabBarStyle: {
             backgroundColor: colors.bg_primary,
             borderTopColor: 'rgba(52, 211, 153, 0.15)',
             borderTopWidth: 1,
-            height: Platform.OS === 'web' ? 85 : 85,
-            paddingBottom: Platform.OS === 'web' ? 18 : 20,
+            height: tabBarHeight,
+            paddingBottom: tabBarPaddingBottom,
             paddingTop: 8,
             position: 'absolute',
-            bottom: 0,
+            bottom: Platform.OS === 'android' ? 4 : 0,
             left: 0,
             right: 0,
           },

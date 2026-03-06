@@ -47,6 +47,16 @@ const getChannelIcon = (channel: Channel) => {
 
 export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) {
   const IconComponent = getChannelIcon(channel);
+  const isI2WEChannel =
+    (channel.slug || '').toLowerCase().includes('i2we') ||
+    (channel.slug || '').toLowerCase().includes('12we') ||
+    (channel.slug || '').toLowerCase().includes('meeting') ||
+    (channel.name || '').toLowerCase().includes('i2we') ||
+    (channel.name || '').toLowerCase().includes('meeting');
+
+  const displayDescription = isI2WEChannel
+    ? 'Track one-on-one meetings'
+    : channel.description;
 
   return (
     <TouchableOpacity
@@ -60,7 +70,7 @@ export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) 
       <View style={styles.content}>
         <Text style={[styles.title, isPriority && styles.priorityTitle]}>{channel.name}</Text>
         <Text style={styles.description} numberOfLines={3}>
-          {channel.description}
+          {displayDescription}
         </Text>
       </View>
     </TouchableOpacity>

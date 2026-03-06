@@ -1,10 +1,15 @@
 {
   "expo": {
-    "name": "Wevysya",
+    "name": "WeVysya",
     "slug": "wevysya-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/wevysya_logo_r.png",
+    "splash": {
+      "image": "./assets/images/wevysya_logo_r.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,14 +17,23 @@
       "icon": "./assets/images/wevysya_logo_r.png",
       "color": "#FF6B35",
       "androidMode": "default",
-      "androidCollapsedTitle": "Wevysya"
+      "androidCollapsedTitle": "WeVysya"
     },
     "android": {
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
+      "splash": {
+        "image": "./assets/images/wevysya_logo_r.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000",
+        "dark": {
+          "image": "./assets/images/wevysya_logo_r.png",
+          "backgroundColor": "#000000"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/wevysya_logo_r.png",
-        "backgroundColor": "#0F172A"
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -33,8 +47,10 @@
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {
@@ -45,6 +61,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/images/wevysya_logo_r.png",
+          "imageWidth": 240,
+          "resizeMode": "contain"
+        }
+      ],
       "expo-web-browser",
       "expo-dev-client",
       "@react-native-community/datetimepicker"

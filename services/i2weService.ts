@@ -79,7 +79,7 @@ export const I2WEService = {
           house_id: profileData.house_id,
           meeting_date: meetingData.meeting_date,
           notes: meetingData.notes || null,
-          status: 'scheduled',
+          status: 'completed',
         })
         .select()
         .single();
