@@ -73,15 +73,17 @@ serve(async (req: Request) => {
       );
     }
 
-    // Stream the audio blob back to the client
-    const audioBlob = await deepgramResponse.blob();
-
-    return new Response(audioBlob, {
+    // Stream the audio back to the client immediately for lowest latency
+    // By passing deepgramResponse.body directly to the Response constructor, 
+    // we stream the data chunks to the mobile app as they arrive from Deepgram
+    return new Response(deepgramResponse.body, {
       status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'audio/mpeg',
-        'Content-Disposition': 'inline; filename="response.mp3"'
+        'Content-Disposition': 'inline; filename="response.mp3"',
+        // Optional: add cache-control if needed
+        'Cache-Control': 'no-store, max-age=0'
       },
     });
   } catch (error) {

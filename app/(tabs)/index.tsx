@@ -6,10 +6,9 @@ import { colors, spacing } from '@/constants/theme';
 import AnimatedBackground from '@/components/shared/AnimatedBackground';
 import GradientText from '@/components/shared/GradientText';
 import FloatingLogo from '@/components/shared/FloatingLogo';
-import AIInputBar from '@/components/ai/AIInputBar';
-import FloatingVoiceButton from '@/components/ai/FloatingVoiceButton';
 import SmartPromptChips from '@/components/ai/SmartPromptChips';
 import AIResponseToast from '@/components/ai/AIResponseToast';
+import AIInputBar from '@/components/ai/AIInputBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/contexts/AIContext';
 import { AIService } from '@/services/aiService';
@@ -27,9 +26,6 @@ import { Activity } from '@/types';
 export default function Home() {
   const { profile } = useAuth();
   const { processIntent } = useAI();
-  const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
   const [linksGivenCount, setLinksGivenCount] = useState(0);
   const [linksReceivedCount, setLinksReceivedCount] = useState(0);
   const [closedDealsCount, setClosedDealsCount] = useState(0);
@@ -76,7 +72,6 @@ export default function Home() {
 
   const handlePromptPress = async (prompt: string) => {
     try {
-      setOrbState('thinking');
       console.log('💡 Processing prompt:', prompt);
 
       // Use Voice OS pipeline for consistent AI processing
@@ -91,12 +86,6 @@ export default function Home() {
       const intent = await actionEngine.classifyIntent(prompt, context);
       console.log('🎯 Intent:', intent.type, intent.category);
 
-      setOrbState('responding');
-
-      // Show and speak the response
-      setToastMessage(intent.response);
-      setShowToast(true);
-
       try {
         await voiceOS.speak(intent.response);
       } catch (speakError) {
@@ -109,93 +98,13 @@ export default function Home() {
           router.push(intent.action!.screen as any);
         }, 1500);
       }
-
-      setTimeout(() => setOrbState('idle'), 2000);
     } catch (error) {
       console.error('❌ Prompt processing error:', error);
-      setOrbState('idle');
-      setToastMessage('Sorry, I couldn\'t process that. Please check your connection.');
-      setShowToast(true);
-    }
-  };
-
-  const handleMicPress = async () => {
-    try {
-      setOrbState('listening');
-      console.log('🎤 Starting voice recording...');
-
-      // Start recording
-      await voiceOS.startRecording();
-      console.log('✅ Recording started');
-
-      // Auto-stop after 5 seconds (or implement manual stop button)
-      setTimeout(async () => {
-        try {
-          setOrbState('thinking');
-          console.log('🛑 Stopping recording...');
-
-          // Transcribe audio using Whisper
-          const transcript = await voiceOS.stopRecordingAndTranscribe();
-          console.log('📝 Transcribed:', transcript);
-
-          if (!transcript || transcript.trim().length === 0) {
-            throw new Error('No speech detected');
-          }
-
-          // Get context and classify intent
-          let context = '';
-          try {
-            context = await knowledgeService.searchKnowledge(transcript);
-            console.log('📚 Context retrieved');
-          } catch (error) {
-            console.log('⚠️ Context search failed, using default');
-            context = 'WeVysya is a business community network.';
-          }
-
-          const intent = await actionEngine.classifyIntent(transcript, context);
-          console.log('🎯 Intent:', intent.type, intent.category);
-
-          setOrbState('responding');
-
-          // Show and speak the response
-          setToastMessage(intent.response);
-          setShowToast(true);
-
-          try {
-            await voiceOS.speak(intent.response);
-          } catch (speakError) {
-            console.log('⚠️ Text-to-speech failed');
-          }
-
-          // Execute action if needed
-          if (intent.type === 'action' && intent.action?.screen) {
-            setTimeout(() => {
-              router.push(intent.action!.screen as any);
-            }, 1500);
-          }
-
-          setTimeout(() => setOrbState('idle'), 2000);
-        } catch (error) {
-          console.error('❌ Voice processing error:', error);
-          setOrbState('idle');
-
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          setToastMessage(`Voice processing failed: ${errorMessage}. Please try text input instead.`);
-          setShowToast(true);
-        }
-      }, 5000); // Stop recording after 5 seconds
-
-    } catch (error) {
-      console.error('❌ Microphone error:', error);
-      setOrbState('idle');
-      setToastMessage('Could not access microphone. Please check permissions and try again.');
-      setShowToast(true);
     }
   };
 
   const handleTextSubmit = async (text: string) => {
     try {
-      setOrbState('thinking');
       console.log('💬 Processing text input:', text);
 
       // Use Voice OS pipeline for proper AI processing
@@ -213,12 +122,6 @@ export default function Home() {
       const intent = await actionEngine.classifyIntent(text, context);
       console.log('🎯 Intent classified:', intent.type, intent.category);
 
-      setOrbState('responding');
-
-      // Show the response
-      setToastMessage(intent.response);
-      setShowToast(true);
-
       // Speak the response
       try {
         await voiceOS.speak(intent.response);
@@ -232,15 +135,8 @@ export default function Home() {
           router.push(intent.action!.screen as any);
         }, 1500);
       }
-
-      setTimeout(() => setOrbState('idle'), 2000);
     } catch (error) {
       console.error('❌ Text processing error:', error);
-      setOrbState('idle');
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setToastMessage(`Processing failed: ${errorMessage}. Please check your connection and try again.`);
-      setShowToast(true);
     }
   };
 
@@ -264,7 +160,7 @@ export default function Home() {
 
         <View style={styles.aiSection}>
           <Text style={styles.aiSectionTitle}>Ask WeVysya Assistant</Text>
-          <AIInputBar onMicPress={handleMicPress} onTextSubmit={handleTextSubmit} />
+          <AIInputBar onMicPress={() => { }} onTextSubmit={handleTextSubmit} />
           <SmartPromptChips onPromptPress={handlePromptPress} />
         </View>
 
@@ -362,17 +258,7 @@ export default function Home() {
         </TouchableOpacity>
 
       </ScrollView>
-      <FloatingVoiceButton
-        onPress={handleMicPress}
-        isActive={orbState === 'listening'}
-      />
-      <AIResponseToast
-        message={toastMessage}
-        visible={showToast}
-        onHide={() => setShowToast(false)}
-        duration={3000}
-      />
-    </View>
+    </View >
   );
 }
 

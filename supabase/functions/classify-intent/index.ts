@@ -80,15 +80,16 @@ serve(async (req: Request) => {
         'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini', // 🚀 FASTER MODEL for lower latency
         messages: [
           {
             role: 'system',
             content: `You are WeVysya Assistant, a helpful AI for the WeVysya community network.
 
 Analyze the user's query and determine if it's:
-1. A KNOWLEDGE question (asking about WeVysya, members, houses, events, etc.) - ANSWER the question using the context
-2. An ACTION command (wants to perform a task) - Acknowledge what you'll do
+1. A KNOWLEDGE question (asking about WeVysya, members, houses, events, etc. generally) - ANSWER the question using the context
+2. An ACTION command (wants to perform a UI task) - Acknowledge what you'll do
+3. A DATABASE QUERY (wants specific live data like "how many members in my house") - Return a query action
 
 Available actions:
 - search_member: Find members by profession, industry, or location
@@ -99,6 +100,7 @@ Available actions:
 - view_profile: View user profile
 - view_channels: Browse channels
 - view_activity: View recent activity
+- query_house_members: Query exactly how many members are in the user's house
 
 Context from knowledge base:
 ${context}
@@ -106,13 +108,14 @@ ${context}
 IMPORTANT: 
 - For KNOWLEDGE questions, use the context above to provide a complete, helpful answer (2-4 sentences)
 - For ACTION commands, provide a friendly acknowledgment of what you'll do
+- For DATABASE QUERIES, return "Let me check that for you." (The client will replace this with live data)
 - Be conversational, warm, and helpful
 - If the context doesn't have the answer, politely say so and suggest alternatives
 
 Respond with a JSON object:
 {
   "type": "knowledge" or "action",
-  "category": "for knowledge: members/houses/events/general, for action: the action name",
+  "category": "for knowledge: general, for action: the action name (e.g. query_house_members)",
   "parameters": {},
   "response": "FULL answer for knowledge OR friendly acknowledgment for actions",
   "confidence": 0.0-1.0
@@ -120,14 +123,14 @@ Respond with a JSON object:
 
 Examples:
 
+Query: "How many members are in my house?"
+Response: {"type": "action", "category": "query_house_members", "parameters": {}, "response": "Let me check the database for your house members.", "confidence": 0.95}
+
 Query: "Find a CA in Bengaluru"
 Response: {"type": "action", "category": "search_member", "parameters": {"profession": "CA", "location": "Bengaluru"}, "response": "I'll find Chartered Accountants in Bengaluru for you!", "confidence": 0.95}
 
 Query: "What is WeVysya?"
-Response: {"type": "knowledge", "category": "general", "parameters": {}, "response": "WeVysya is a revolutionary private business network exclusively for the Vysya community. It connects members across different business backgrounds through a trusted ecosystem, enabling collaboration, advice sharing, and business growth together. The platform features house-based social structures, business deal sharing, professional networking, and community support.", "confidence": 0.95}
-
-Query: "How do I post a deal?"
-Response: {"type": "knowledge", "category": "deals", "parameters": {}, "response": "To post a deal, go to the Discover tab and click 'Post Deal'. Fill in the title, description, amount, type (BUY, SELL, PARTNERSHIP, or INVESTMENT), and add relevant tags. You can set visibility to public or house-only, then submit. Interested members can then reach out to you directly!", "confidence": 0.95}`,
+Response: {"type": "knowledge", "category": "general", "parameters": {}, "response": "WeVysya is a revolutionary private business network exclusively for the Vysya community. It connects members across different business backgrounds...", "confidence": 0.95}`,
           },
           {
             role: 'user',
@@ -135,7 +138,7 @@ Response: {"type": "knowledge", "category": "deals", "parameters": {}, "response
           },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
+        temperature: 0.3, // Lower temperature for more deterministic/faster routing
         max_tokens: 300,
       }),
     });
