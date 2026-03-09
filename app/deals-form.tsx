@@ -120,7 +120,11 @@ export default function DealsForm() {
         <Text style={styles.headerTitle}>Create Deal</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>
           Received from <Text style={styles.required}>*</Text>
         </Text>
@@ -134,7 +138,10 @@ export default function DealsForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <ScrollView style={styles.memberList}>
+          <ScrollView
+            style={styles.memberList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled">
             {houseMembers.map((member) => (
               <TouchableOpacity
                 key={member.id}

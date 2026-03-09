@@ -15,6 +15,7 @@ export default function LinksForm() {
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
   const [houses, setHouses] = useState<any[]>([]);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -144,6 +145,10 @@ export default function LinksForm() {
     }
   };
 
+  const filteredMembers = houseMembers.filter((member) =>
+    member.full_name?.toLowerCase().includes(memberSearchQuery.trim().toLowerCase())
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -153,13 +158,20 @@ export default function LinksForm() {
         <Text style={styles.headerTitle}>Link Form</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>
           Send to <Text style={styles.required}>*</Text>
         </Text>
         <TouchableOpacity
           style={styles.picker}
-          onPress={() => setShowMemberPicker(!showMemberPicker)}>
+          onPress={() => {
+            setShowMemberPicker(!showMemberPicker);
+            setMemberSearchQuery('');
+          }}>
           <User size={20} color={colors.text_secondary} />
           <Text style={styles.pickerText}>
             {selectedMember ? selectedMember.full_name : 'Choose Member'}
@@ -167,21 +179,36 @@ export default function LinksForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <ScrollView style={styles.memberList}>
+          <ScrollView
+            style={styles.memberList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={styles.memberSearchInput}
+              placeholder="Search member by name"
+              placeholderTextColor={colors.text_tertiary}
+              value={memberSearchQuery}
+              onChangeText={setMemberSearchQuery}
+            />
             {houseMembers.length === 0 ? (
               <View style={styles.emptyMemberList}>
                 <Text style={styles.emptyMemberText}>
                   No other members found in this house
                 </Text>
               </View>
+            ) : filteredMembers.length === 0 ? (
+              <View style={styles.emptyMemberList}>
+                <Text style={styles.emptyMemberText}>No members match your search</Text>
+              </View>
             ) : (
-              houseMembers.map((member) => (
+              filteredMembers.map((member) => (
                 <TouchableOpacity
                   key={member.id}
                   style={styles.memberItem}
                   onPress={() => {
                     setSelectedMember(member);
                     setShowMemberPicker(false);
+                    setMemberSearchQuery('');
                   }}>
                   <Text style={styles.memberName}>{member.full_name}</Text>
                   <Text style={styles.memberDetails}>
@@ -360,6 +387,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     maxHeight: 200,
+  },
+  memberSearchInput: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    margin: spacing.sm,
+    marginBottom: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: colors.text_primary,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   memberItem: {
     padding: spacing.md,
