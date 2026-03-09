@@ -4,7 +4,7 @@
     "slug": "wevysya-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/wevysya_logo_r.png",
+    "icon": "./assets/images/icon.png",
     "splash": {
       "image": "./assets/images/wevysya_logo_r.png",
       "resizeMode": "contain",
@@ -56,7 +56,7 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/wevysya_logo_r.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
