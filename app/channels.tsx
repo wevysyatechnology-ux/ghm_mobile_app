@@ -36,11 +36,23 @@ export default function ChannelsScreen() {
   };
 
   const handleChannelPress = (channel: Channel) => {
+    const isVisitorsChannel =
+      (channel.slug || '').toLowerCase().includes('visitor') ||
+      (channel.name || '').toLowerCase().includes('visitor');
+
+    if (isVisitorsChannel) {
+      return;
+    }
+
     router.push({
       pathname: '/channel-detail',
       params: { channelId: channel.id, channelSlug: channel.slug },
     });
   };
+
+  const isVisitorsChannel = (channel: Channel) =>
+    (channel.slug || '').toLowerCase().includes('visitor') ||
+    (channel.name || '').toLowerCase().includes('visitor');
 
   const priorityChannels = channels.filter(c =>
     ['links', 'deals', '12we-meetings'].includes(c.slug)
@@ -112,6 +124,8 @@ export default function ChannelsScreen() {
                   key={channel.id}
                   channel={channel}
                   onPress={handleChannelPress}
+                  disabled={isVisitorsChannel(channel)}
+                  descriptionOverride={isVisitorsChannel(channel) ? 'Coming Soon' : undefined}
                 />
               ))}
             </View>

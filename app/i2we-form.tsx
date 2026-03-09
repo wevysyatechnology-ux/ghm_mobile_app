@@ -171,7 +171,11 @@ export default function I2WEForm() {
         <Text style={styles.headerTitle}>Log I2WE Meeting</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled">
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>I2WE - I to WE</Text>
           <Text style={styles.infoDescription}>
@@ -192,7 +196,10 @@ export default function I2WEForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <ScrollView style={styles.memberList}>
+          <ScrollView
+            style={styles.memberList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled">
             {houseMembers.map((member) => (
               <TouchableOpacity
                 key={member.id}

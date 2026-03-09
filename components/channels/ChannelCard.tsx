@@ -18,6 +18,8 @@ interface ChannelCardProps {
   channel: Channel;
   onPress: (channel: Channel) => void;
   isPriority?: boolean;
+  disabled?: boolean;
+  descriptionOverride?: string;
 }
 
 const getChannelIcon = (channel: Channel) => {
@@ -45,7 +47,13 @@ const getChannelIcon = (channel: Channel) => {
   return User;
 };
 
-export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) {
+export function ChannelCard({
+  channel,
+  onPress,
+  isPriority,
+  disabled = false,
+  descriptionOverride,
+}: ChannelCardProps) {
   const IconComponent = getChannelIcon(channel);
   const isI2WEChannel =
     (channel.slug || '').toLowerCase().includes('i2we') ||
@@ -54,17 +62,22 @@ export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) 
     (channel.name || '').toLowerCase().includes('i2we') ||
     (channel.name || '').toLowerCase().includes('meeting');
 
-  const displayDescription = isI2WEChannel
-    ? 'Track one-on-one meetings'
-    : channel.description;
+  const displayDescription = descriptionOverride ||
+    (isI2WEChannel ? 'Track one-on-one meetings' : channel.description);
 
   return (
     <TouchableOpacity
-      style={[styles.card, isPriority && styles.priorityCard]}
+      style={[styles.card, isPriority && styles.priorityCard, disabled && styles.disabledCard]}
       onPress={() => onPress(channel)}
-      activeOpacity={0.7}
+      activeOpacity={disabled ? 1 : 0.7}
+      disabled={disabled}
     >
-      <View style={[styles.iconContainer, isPriority && styles.priorityIconContainer]}>
+      <View
+        style={[
+          styles.iconContainer,
+          isPriority && styles.priorityIconContainer,
+          disabled && styles.disabledIconContainer,
+        ]}>
         <IconComponent size={26} color={COLORS.primary} />
       </View>
       <View style={styles.content}>
@@ -93,6 +106,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 211, 153, 0.3)',
     borderWidth: 1.5,
   },
+  disabledCard: {
+    opacity: 0.75,
+  },
   iconContainer: {
     width: 56,
     height: 56,
@@ -104,6 +120,9 @@ const styles = StyleSheet.create({
   },
   priorityIconContainer: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
+  },
+  disabledIconContainer: {
+    opacity: 0.85,
   },
   content: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ChevronLeft, Phone, User as UserIcon } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
@@ -31,7 +31,6 @@ export default function MemberProfileScreen() {
   const location = params.location || 'Location not set';
   const circle = params.circle || 'open';
   const tier = params.tier || 'regular';
-  const phoneNumber = (params.phone_number || '').trim();
   const profilePhoto = params.profile_photo || '';
   const [houseDetails, setHouseDetails] = useState<HouseDetails | null>(null);
 
@@ -83,25 +82,6 @@ export default function MemberProfileScreen() {
 
     loadHouseDetails();
   }, [params.id, profile?.house_id]);
-
-  const handleCall = async () => {
-    if (!phoneNumber) {
-      Alert.alert('Phone unavailable', 'No phone number is available for this member.');
-      return;
-    }
-
-    const dialUrl = `tel:${phoneNumber.replace(/\s+/g, '')}`;
-    try {
-      const supported = await Linking.canOpenURL(dialUrl);
-      if (!supported) {
-        Alert.alert('Unable to call', 'Dialer is not available on this device.');
-        return;
-      }
-      await Linking.openURL(dialUrl);
-    } catch {
-      Alert.alert('Unable to call', 'Could not open the phone dialer.');
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -160,14 +140,11 @@ export default function MemberProfileScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.callButton, !phoneNumber && styles.callButtonDisabled]}
-            onPress={handleCall}
-            disabled={!phoneNumber}
+            style={[styles.callButton, styles.callButtonDisabled]}
+            disabled
             activeOpacity={0.85}>
-            <Phone size={18} color={phoneNumber ? colors.bg_primary : colors.text_secondary} />
-            <Text style={[styles.callText, !phoneNumber && styles.callTextDisabled]}>
-              {phoneNumber ? `Call ${phoneNumber}` : 'Phone unavailable'}
-            </Text>
+            <Phone size={18} color={colors.text_secondary} />
+            <Text style={[styles.callText, styles.callTextDisabled]}>Calling coming soon</Text>
           </TouchableOpacity>
         </View>
       </View>
