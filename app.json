@@ -32,7 +32,7 @@
         }
       },
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/wevysya_logo_r.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#000000"
       },
       "permissions": [
