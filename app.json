@@ -6,6 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
+      "image": "./assets/images/splash-transparent.png",
+      "resizeMode": "contain",
       "backgroundColor": "#0B1F14"
     },
     "scheme": "myapp",
@@ -22,8 +24,11 @@
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
+        "image": "./assets/images/splash-transparent.png",
+        "resizeMode": "contain",
         "backgroundColor": "#0B1F14",
         "dark": {
+          "image": "./assets/images/splash-transparent.png",
           "backgroundColor": "#0B1F14"
         }
       },
@@ -60,7 +65,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B1F14"
+          "backgroundColor": "#0B1F14",
+          "image": "./assets/images/splash-transparent.png",
+          "imageWidth": 1,
+          "resizeMode": "contain"
         }
       ],
       "expo-web-browser",
