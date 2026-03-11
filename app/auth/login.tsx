@@ -19,13 +19,10 @@ import { colors } from '@/constants/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [loginMode, setLoginMode] = useState<'phone' | 'email'>('email');
-  const [phoneNumber, setPhoneNumber] = useState('9902093811');
-  const [email, setEmail] = useState('test9902093811@wevysya.com');
-  const [password, setPassword] = useState('TestUser123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [cooldown, setCooldown] = useState(0);
 
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -40,13 +37,6 @@ export default function LoginScreen() {
 
   const formSlide = useRef(new Animated.Value(50)).current;
   const formOpacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [cooldown]);
 
   useEffect(() => {
     Animated.sequence([
@@ -159,43 +149,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSendOTP = async () => {
-    if (cooldown > 0) {
-      setError(`Please wait ${cooldown} seconds before trying again`);
-      return;
-    }
-
-    if (!phoneNumber.trim()) {
-      setError('Please enter a phone number');
-      return;
-    }
-
-    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
-
-    setIsLoading(true);
-    setError('');
-
-    const result = await authService.signInWithPhone(formattedPhone);
-
-    setIsLoading(false);
-
-    if (result.success) {
-      setCooldown(60);
-      router.push({
-        pathname: '/auth/verify',
-        params: { phoneNumber: formattedPhone },
-      });
-    } else {
-      const errorMessage = result.error || 'Failed to send OTP';
-      if (errorMessage.includes('rate limit') || errorMessage.includes('Email rate limit exceeded')) {
-        setError('Too many attempts. Please wait a few minutes before trying again.');
-        setCooldown(120);
-      } else {
-        setError(errorMessage);
-      }
-    }
-  };
-
   const logoRotateInterpolate = logoRotate.interpolate({
     inputRange: [0, 1],
     outputRange: ['-15deg', '0deg'],
@@ -272,9 +225,7 @@ export default function LoginScreen() {
                 },
               ]}
             >
-              {loginMode === 'phone'
-                ? 'Enter your phone number to continue'
-                : 'Sign in with your email and password'}
+              Sign in with your email and password
             </Animated.Text>
           </View>
 
@@ -287,67 +238,7 @@ export default function LoginScreen() {
               },
             ]}
           >
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
-                style={[styles.toggleButton, loginMode === 'phone' && styles.toggleButtonActive]}
-                onPress={() => setLoginMode('phone')}
-                disabled={isLoading}>
-                <Text
-                  style={[styles.toggleText, loginMode === 'phone' && styles.toggleTextActive]}>
-                  Phone
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleButton, loginMode === 'email' && styles.toggleButtonActive]}
-                onPress={() => setLoginMode('email')}
-                disabled={isLoading}>
-                <Text
-                  style={[styles.toggleText, loginMode === 'email' && styles.toggleTextActive]}>
-                  Email
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {loginMode === 'phone' ? (
-              <>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="+1234567890"
-                    placeholderTextColor={colors.text_muted}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                    editable={!isLoading}
-                  />
-                </View>
-
-                {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-                <TouchableOpacity
-                  style={[styles.button, (isLoading || cooldown > 0) && styles.buttonDisabled]}
-                  onPress={handleSendOTP}
-                  disabled={isLoading || cooldown > 0}>
-                  {isLoading ? (
-                    <ActivityIndicator color={colors.bg_primary} />
-                  ) : (
-                    <Text style={styles.buttonText}>
-                      {cooldown > 0 ? `Wait ${cooldown}s` : 'Send OTP'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-
-                <Text style={styles.infoText}>
-                  We'll send you a one-time password to verify your phone number
-                </Text>
-
-                <View style={styles.devHint}>
-                  <Text style={styles.devHintText}>Development Mode: Use OTP 1234</Text>
-                </View>
-              </>
-            ) : (
-              <>
+            <>
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
@@ -376,21 +267,7 @@ export default function LoginScreen() {
                 </View>
 
                 {error ? (
-                  <View>
-                    <Text style={styles.errorText}>{error}</Text>
-                    {error.includes('does not exist') && (
-                      <TouchableOpacity
-                        onPress={() => {
-                          setLoginMode('phone');
-                          setError('');
-                        }}
-                        style={styles.switchButton}>
-                        <Text style={styles.switchButtonText}>
-                          Try Phone Login Instead
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  <Text style={styles.errorText}>{error}</Text>
                 ) : null}
 
                 <TouchableOpacity
@@ -404,13 +281,6 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
 
-                <View style={styles.devHint}>
-                  <Text style={styles.devHintText}>Test User Credentials</Text>
-                  <Text style={[styles.devHintText, { fontSize: 12, marginTop: 4, opacity: 0.8 }]}>
-                    Pre-filled above
-                  </Text>
-                </View>
-
                 <View style={styles.signupPrompt}>
                   <Text style={styles.signupText}>Don't have an account?</Text>
                   <TouchableOpacity
@@ -419,8 +289,7 @@ export default function LoginScreen() {
                     <Text style={styles.signupLink}>Create Account</Text>
                   </TouchableOpacity>
                 </View>
-              </>
-            )}
+            </>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
@@ -492,30 +361,6 @@ const styles = StyleSheet.create({
   form: {
     width: '100%',
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(52, 211, 153, 0.05)',
-    borderRadius: 16,
-    padding: 4,
-    marginBottom: 24,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.accent_green_bright,
-  },
-  toggleText: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 16,
-    color: colors.text_muted,
-  },
-  toggleTextActive: {
-    color: colors.bg_primary,
-  },
   inputContainer: {
     marginBottom: 16,
   },
@@ -552,40 +397,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 12,
-  },
-  switchButton: {
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    alignSelf: 'center',
-  },
-  switchButtonText: {
-    fontFamily: 'Poppins-Medium',
-    color: colors.accent_green_bright,
-    fontSize: 13,
-  },
-  infoText: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 14,
-    color: colors.text_muted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  devHint: {
-    marginTop: 24,
-    padding: 12,
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.3)',
-  },
-  devHintText: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 13,
-    color: colors.accent_green_bright,
-    textAlign: 'center',
   },
   signupPrompt: {
     flexDirection: 'row',
