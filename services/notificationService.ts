@@ -5,6 +5,7 @@
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import {
@@ -119,9 +120,10 @@ class NotificationService {
    */
   async registerForPushNotifications(): Promise<string | null> {
     try {
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'your-project-id',
-      });
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        '1b21598b-62b1-44b3-a5f6-af02bb39dff1';
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
       return tokenData.data;
     } catch (error) {
