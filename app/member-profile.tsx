@@ -43,11 +43,6 @@ export default function MemberProfileScreen() {
     }
     const dialUrl = `tel:${phoneNumber.replace(/\s+/g, '')}`;
     try {
-      const supported = await Linking.canOpenURL(dialUrl);
-      if (!supported) {
-        Alert.alert('Unable to call', 'Dialer is not available on this device.');
-        return;
-      }
       await Linking.openURL(dialUrl);
     } catch {
       Alert.alert('Unable to call', 'Could not open the phone dialer.');

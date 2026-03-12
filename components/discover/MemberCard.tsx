@@ -39,12 +39,6 @@ export default function MemberCard({ member }: MemberCardProps) {
     const dialUrl = `tel:${dialableNumber}`;
 
     try {
-      const supported = await Linking.canOpenURL(dialUrl);
-      if (!supported) {
-        Alert.alert('Unable to call', 'Dialer is not available on this device.');
-        return;
-      }
-
       await Linking.openURL(dialUrl);
     } catch {
       Alert.alert('Unable to call', 'Could not open the phone dialer.');
