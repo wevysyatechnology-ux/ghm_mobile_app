@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox } from 'lucide-react-native';
+import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox, CalendarClock } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import AnimatedBackground from '@/components/shared/AnimatedBackground';
 import GradientText from '@/components/shared/GradientText';
@@ -59,13 +59,16 @@ export default function Home() {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'links':
-        router.push('/links-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: 'links' } });
         break;
       case 'deals':
-        router.push('/deals-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: 'deals' } });
         break;
       case 'connect':
-        router.push('/i2we-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: '12we-meetings' } });
+        break;
+      case 'events':
+        router.push('/event-meetings' as any);
         break;
     }
   };
@@ -193,6 +196,16 @@ export default function Home() {
               <Users size={28} color={colors.accent_green_bright} strokeWidth={2.5} />
             </View>
             <Text style={styles.actionTitle}>i2we</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.primaryAction}
+            onPress={() => handleQuickAction('events')}
+            activeOpacity={0.8}>
+            <View style={styles.actionIconBox}>
+              <CalendarClock size={28} color={colors.accent_green_bright} strokeWidth={2.5} />
+            </View>
+            <Text style={styles.actionTitle}>Events</Text>
           </TouchableOpacity>
         </View>
 

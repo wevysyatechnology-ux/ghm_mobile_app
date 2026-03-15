@@ -15,10 +15,12 @@ import { channelsService } from '@/services/channelsService';
 import { DealsService } from '@/services/dealsService';
 import { I2WEService } from '@/services/i2weService';
 import { LinksService } from '@/services/linksService';
+import { EventsService, EventMeeting } from '@/services/eventsService';
 import { Channel, ChannelPost, CoreDeal, CoreI2WE, CoreLink } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { format, isToday, isTomorrow } from 'date-fns';
 
 export default function ChannelDetailScreen() {
   const { channelId, channelSlug } = useLocalSearchParams();
@@ -28,6 +30,8 @@ export default function ChannelDetailScreen() {
   const [links, setLinks] = useState<CoreLink[]>([]);
   const [deals, setDeals] = useState<CoreDeal[]>([]);
   const [meetings, setMeetings] = useState<CoreI2WE[]>([]);
+  const [events, setEvents] = useState<EventMeeting[]>([]);
+  const [eventsTab, setEventsTab] = useState<'upcoming' | 'completed'>('upcoming');
   const [loading, setLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState('');
@@ -65,6 +69,7 @@ export default function ChannelDetailScreen() {
     ) {
       return 'meetings';
     }
+    if (normalizedSlug.includes('event')) return 'events';
 
     return 'posts';
   };
@@ -95,6 +100,19 @@ export default function ChannelDetailScreen() {
       setMeetings(meetingsData);
       setLinks([]);
       setDeals([]);
+      setPosts([]);
+      return;
+    }
+
+    if (channelType === 'events') {
+      const [upcoming, completed] = await Promise.all([
+        EventsService.getUpcomingEvents().catch(() => []),
+        EventsService.getCompletedEvents().catch(() => []),
+      ]);
+      setEvents([...upcoming, ...completed]);
+      setLinks([]);
+      setDeals([]);
+      setMeetings([]);
       setPosts([]);
       return;
     }
@@ -208,6 +226,11 @@ export default function ChannelDetailScreen() {
 
     if (channelType === 'meetings') {
       router.push('/i2we-form');
+      return;
+    }
+
+    if (channelType === 'events') {
+      router.push('/event-meetings');
       return;
     }
 
@@ -418,6 +441,139 @@ export default function ChannelDetailScreen() {
                   </View>
                 ))
               )}
+            </>
+          )}
+
+          {getChannelType(channel.slug) === 'events' && (
+            <>
+              <View style={styles.eventsTabRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.eventsTab,
+                    eventsTab === 'upcoming' && styles.eventsTabActive,
+                  ]}
+                  onPress={() => setEventsTab('upcoming')}>
+                  <Text
+                    style={[
+                      styles.eventsTabText,
+                      eventsTab === 'upcoming' && styles.eventsTabTextActive,
+                    ]}>
+                    Upcoming ({events.filter((e) => e.event_date >= new Date().toISOString().split('T')[0]).length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.eventsTab,
+                    eventsTab === 'completed' && styles.eventsTabActive,
+                  ]}
+                  onPress={() => setEventsTab('completed')}>
+                  <Text
+                    style={[
+                      styles.eventsTabText,
+                      eventsTab === 'completed' && styles.eventsTabTextActive,
+                    ]}>
+                    Completed ({events.filter((e) => e.event_date < new Date().toISOString().split('T')[0]).length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {(() => {
+                const today = new Date().toISOString().split('T')[0];
+                const filtered = eventsTab === 'upcoming'
+                  ? events.filter((e) => e.event_date >= today)
+                  : events.filter((e) => e.event_date < today);
+
+                if (filtered.length === 0) {
+                  return (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>
+                        No {eventsTab} events
+                      </Text>
+                      <Text style={styles.emptyStateSubtext}>
+                        {eventsTab === 'upcoming'
+                          ? 'New events will appear here once scheduled.'
+                          : 'Past events will appear here.'}
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return filtered.map((event) => {
+                  const dateObj = new Date(event.event_date + 'T00:00:00');
+                  const dateLabel = isToday(dateObj)
+                    ? 'Today'
+                    : isTomorrow(dateObj)
+                    ? 'Tomorrow'
+                    : format(dateObj, 'EEE, MMM d, yyyy');
+
+                  let timeLabel = 'Time TBD';
+                  if (event.event_time) {
+                    const [h, m] = event.event_time.split(':').map(Number);
+                    const t = new Date(); t.setHours(h, m, 0, 0);
+                    timeLabel = format(t, 'h:mm a');
+                  }
+
+                  const isCompleted = eventsTab === 'completed';
+
+                  return (
+                    <View
+                      key={event.id}
+                      style={[
+                        styles.postCard,
+                        styles.eventCard,
+                        isCompleted && styles.eventCardCompleted,
+                      ]}>
+                      <View style={styles.eventCardHeader}>
+                        <View style={[
+                          styles.eventLevelBadge,
+                          isCompleted && styles.eventLevelBadgeDim,
+                        ]}>
+                          <Text style={styles.eventLevelText}>
+                            {event.event_level
+                              ? event.event_level.charAt(0).toUpperCase() +
+                                event.event_level.slice(1)
+                              : 'Event'}
+                          </Text>
+                        </View>
+                        {isCompleted && (
+                          <View style={styles.doneBadge}>
+                            <Text style={styles.doneBadgeText}>✓ Done</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {event.title ? (
+                        <Text style={styles.postTitle}>{event.title}</Text>
+                      ) : null}
+
+                      {event.description ? (
+                        <Text style={styles.postContent} numberOfLines={2}>
+                          {event.description}
+                        </Text>
+                      ) : null}
+
+                      <Text style={styles.eventMeta}>📅 {dateLabel}</Text>
+                      <Text style={styles.eventMeta}>🕐 {timeLabel}</Text>
+                      <Text style={styles.eventMeta} numberOfLines={1}>
+                        📍 {event.location || 'Location TBD'}
+                      </Text>
+
+                      {!isCompleted && event.meeting_link ? (
+                        <TouchableOpacity
+                          style={styles.joinBtn}
+                          onPress={() => {
+                            const link = event.meeting_link!;
+                            if (link.startsWith('http://') || link.startsWith('https://')) {
+                              require('react-native').Linking.openURL(link);
+                            }
+                          }}>
+                          <Text style={styles.joinBtnText}>🎥 Join Meeting</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  );
+                });
+              })()}
             </>
           )}
 
@@ -674,5 +830,89 @@ const styles = StyleSheet.create({
   postDate: {
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.textTertiary,
+  },
+  // Events
+  eventsTabRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: 4,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  eventsTab: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+  },
+  eventsTabActive: {
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+  },
+  eventsTabText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  eventsTabTextActive: {
+    color: COLORS.primary,
+  },
+  eventCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  eventCardCompleted: {
+    borderLeftColor: COLORS.textSecondary,
+    opacity: 0.85,
+  },
+  eventCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  eventLevelBadge: {
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
+  eventLevelBadgeDim: {
+    backgroundColor: 'rgba(156,163,175,0.15)',
+  },
+  eventLevelText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
+    textTransform: 'capitalize',
+  },
+  doneBadge: {
+    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
+  doneBadgeText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  eventMeta: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    marginTop: 3,
+  },
+  joinBtn: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+  },
+  joinBtnText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: '700',
+    color: COLORS.onPrimary || '#000',
   },
 });

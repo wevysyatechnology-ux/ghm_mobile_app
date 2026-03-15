@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Link, Handshake, Users, Grid } from 'lucide-react-native';
+import { Link, Handshake, Users, Grid, CalendarClock } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import DiscoverSection from '@/components/discover/DiscoverSection';
 import FloatingLogo from '@/components/shared/FloatingLogo';
@@ -76,6 +76,14 @@ export default function Discover() {
       subtitle: 'Connect with house members',
       color: colors.accent_green_bright,
       route: '/i2we-form' as const,
+    },
+    {
+      slug: 'event-meetings',
+      icon: CalendarClock,
+      title: 'Event Meetings',
+      subtitle: 'Upcoming & completed house events',
+      color: colors.accent_green_bright,
+      route: '/event-meetings' as const,
     },
   ];
 
