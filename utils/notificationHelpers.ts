@@ -365,3 +365,39 @@ export async function sendBatchNotification(params: {
     priority: 'normal',
   });
 }
+
+/**
+ * 📅 Send Event Created / Meeting Reminder Notification
+ * Notifies all house members when a new event is created or a reminder is due.
+ */
+export async function sendEventCreatedNotification(params: {
+  userIds: string[];
+  eventId: string;
+  eventTitle: string;
+  houseName: string;
+  houseId: string;
+  date: string;
+  time?: string;
+  location?: string;
+  meetingLink?: string;
+  eventLevel?: string;
+}): Promise<boolean> {
+  const timeStr = params.time ? ` at ${params.time}` : '';
+  return sendNotification({
+    userIds: params.userIds,
+    type: 'meeting_reminder',
+    title: `📅 New Event: ${params.eventTitle}`,
+    body: `${params.houseName} has a ${params.eventLevel || 'house'} event on ${params.date}${timeStr}${params.location ? ` · ${params.location}` : ''}.`,
+    data: {
+      eventId: params.eventId,
+      houseName: params.houseName,
+      houseId: params.houseId,
+      date: params.date,
+      time: params.time || '',
+      location: params.location,
+      meetingLink: params.meetingLink,
+      meetingType: params.eventLevel || 'house',
+    },
+    priority: 'high',
+  });
+}

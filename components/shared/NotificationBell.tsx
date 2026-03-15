@@ -18,6 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import { Bell } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { notificationService } from '@/services/notificationService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -132,10 +133,67 @@ export function NotificationBell() {
       fetchUnreadCount();
     }
 
-    // Handle navigation based on notification type
-    // You can implement navigation logic here
-    console.log('Navigate to:', notification.type);
     setShowModal(false);
+
+    const data = notification.data || {};
+
+    switch (notification.type) {
+      // ── Event notifications → Event Detail (or list if no id) ────────
+      case 'meeting_reminder':
+      case 'attendance_marked':
+        if (data.eventId) {
+          router.push({ pathname: '/event-detail', params: { eventId: data.eventId } } as any);
+        } else {
+          router.push('/event-meetings' as any);
+        }
+        break;
+
+      // ── Links → Links channel-detail ────────────────────────────────
+      case 'link_received':
+      case 'link_sent':
+        router.push({
+          pathname: '/channel-detail',
+          params: { channelId: '', channelSlug: 'links' },
+        } as any);
+        break;
+
+      // ── Deals → Deals channel-detail ────────────────────────────────
+      case 'deal_recorded':
+        router.push({
+          pathname: '/channel-detail',
+          params: { channelId: '', channelSlug: 'deals' },
+        } as any);
+        break;
+
+      // ── I2WE meetings → 12we-meetings channel-detail ────────────────
+      case 'i2we_meeting_scheduled':
+      case 'i2we_meeting_recorded':
+        router.push({
+          pathname: '/channel-detail',
+          params: { channelId: '', channelSlug: '12we-meetings' },
+        } as any);
+        break;
+
+      // ── AI suggestions → Discover tab ───────────────────────────────
+      case 'ai_match_suggestion':
+        router.push('/(tabs)/discover' as any);
+        break;
+
+      // ── AI inactive reminder → AI tab ───────────────────────────────
+      case 'ai_inactive_reminder':
+        router.push('/(tabs)/index' as any);
+        break;
+
+      // ── Application / onboarding → Profile tab ──────────────────────
+      case 'application_submitted':
+      case 'application_approved':
+        router.push('/(tabs)/profile' as any);
+        break;
+
+      default:
+        console.log('No navigation defined for type:', notification.type);
+        break;
+    }
   };
 
   const handleMarkAllRead = async () => {
@@ -172,6 +230,8 @@ export function NotificationBell() {
       ai_inactive_reminder: '👋',
       application_submitted: '📝',
       application_approved: '🎉',
+      i2we_meeting_scheduled: '📅',
+      i2we_meeting_recorded: '✅',
     };
     return iconMap[type] || '🔔';
   };
