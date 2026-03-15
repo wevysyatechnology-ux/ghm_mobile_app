@@ -309,12 +309,13 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xxl,
     gap: spacing.md,
   },
   primaryAction: {
-    flex: 1,
+    width: '47%',
     backgroundColor: 'rgba(22, 33, 28, 0.95)',
     borderRadius: 20,
     padding: spacing.lg,
