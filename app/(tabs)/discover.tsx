@@ -175,12 +175,13 @@ const styles = StyleSheet.create({
   },
   quickChannelsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
     gap: spacing.md,
   },
   quickChannelCard: {
-    flex: 1,
+    width: '47%',
     backgroundColor: 'rgba(52, 211, 153, 0.1)',
     borderRadius: 16,
     padding: spacing.lg,
