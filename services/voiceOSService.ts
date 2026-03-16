@@ -1,9 +1,8 @@
 import { Audio } from 'expo-av';
-import * as Speech from 'expo-speech';
 import { Platform } from 'react-native';
 import { knowledgeService } from './knowledgeService';
 import { actionEngine } from './actionEngine';
-import { getTranscribeEndpoint, fetchWithErrorHandling } from '@/lib/apiConfig';
+import { getTranscribeEndpoint, getSpeakEndpoint, getAnalyzeTextEndpoint, fetchWithErrorHandling } from '@/lib/apiConfig';
 
 export interface VoiceCommand {
   transcript: string;
@@ -19,6 +18,7 @@ export interface VoiceCommand {
  */
 class VoiceOSService {
   private recording: Audio.Recording | null = null;
+  private sound: Audio.Sound | null = null;
   private isListening = false;
   private wakeWordActive = false;
 
@@ -37,8 +37,8 @@ class VoiceOSService {
   }
 
   /**
-   * 2️⃣ Speech → Text (Whisper)
-   * Records audio and converts to text using OpenAI Whisper
+   * 2️⃣ Speech → Text (Deepgram)
+   * Records audio and converts to text using Deepgram STT
    */
   async startRecording(): Promise<void> {
     try {
@@ -90,10 +90,10 @@ class VoiceOSService {
         throw new Error('No recording URI available');
       }
 
-      // Convert to text using Whisper
+      // Convert to text using Deepgram
       const transcript = await this.transcribeAudio(uri);
       console.log('📝 Transcript:', transcript);
-      
+
       return transcript;
     } catch (error) {
       console.error('❌ Failed to transcribe:', error);
@@ -108,10 +108,10 @@ class VoiceOSService {
   private async transcribeAudio(audioUri: string): Promise<string> {
     try {
       console.log('🎙️ Preparing audio file for transcription...');
-      
+
       // Create FormData for multipart upload
       const formData = new FormData();
-      
+
       // For React Native, we need to use the URI-based format
       // The fetch API on React Native handles this specially
       const fileData: any = {
@@ -119,7 +119,7 @@ class VoiceOSService {
         type: 'audio/m4a',
         name: 'audio.m4a',
       };
-      
+
       // On web, we need to convert to blob
       if (Platform.OS === 'web') {
         const response = await fetch(audioUri);
@@ -129,16 +129,16 @@ class VoiceOSService {
         // On mobile, use URI format
         formData.append('file', fileData as any);
       }
-      
+
       formData.append('language', 'en');
 
       // Call backend proxy endpoint via Supabase Edge Function
       const endpoint = getTranscribeEndpoint();
-      
+
       // Get Supabase anon key for authorization
       const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-      
-      console.log('📡 Calling Whisper transcribe endpoint...');
+
+      console.log('📡 Calling Deepgram transcribe endpoint...');
       const transcribeResponse = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -149,7 +149,7 @@ class VoiceOSService {
 
       if (!transcribeResponse.ok) {
         let errorMessage = 'Unknown error';
-        
+
         // Try to parse JSON error first
         try {
           const errorData = await transcribeResponse.json();
@@ -165,15 +165,15 @@ class VoiceOSService {
             errorMessage = `HTTP ${transcribeResponse.status}: Failed to transcribe`;
           }
         }
-        
-        throw new Error(`Whisper transcription failed: ${errorMessage}`);
+
+        throw new Error(`Deepgram transcription failed: ${errorMessage}`);
       }
 
       const data = await transcribeResponse.json();
       console.log('✅ Transcription successful:', data.text);
       return data.text;
     } catch (error) {
-      console.error('❌ Whisper transcription failed:', error);
+      console.error('❌ Deepgram transcription failed:', error);
       throw error;
     }
   }
@@ -196,21 +196,54 @@ class VoiceOSService {
         };
       }
 
-      // Step 1: Search knowledge base for relevant context (RAG)
-      const relevantContext = await knowledgeService.searchKnowledge(transcript);
+      // Check local intent classification first for ultra-fast response
+      let intent = actionEngine.fastLocalClassification(transcript);
+      let relevantContext = '';
 
-      // Step 2: Classify intent and determine action
-      const intent = await actionEngine.classifyIntent(transcript, relevantContext);
+      // If local regex didn't catch it, hit the backend OpenAI
+      if (!intent) {
+        // Step 1: Classify bare intent to see if it even NEEDS a long RAG lookup
+        // By passing empty context, we save the first DB hit if it's just an action
+        intent = await actionEngine.classifyIntent(transcript, '');
 
-      // Step 3: Generate response
+        // If GPT says it's a knowledge query, THEN we do the slow RAG search
+        if (intent.type === 'knowledge') {
+          console.log('📚 Fetching RAG context for knowledge query...');
+          relevantContext = await knowledgeService.searchKnowledge(transcript);
+        }
+      }
+
+      console.log('🎯 Final Intent:', intent.type, intent.category);
+
       let response: string;
-      
+
       if (intent.type === 'knowledge') {
-        // Knowledge question - use RAG
+        // Knowledge question - generate GPT response with context
         response = await this.generateKnowledgeResponse(transcript, relevantContext);
       } else {
-        // Action command - execute and respond
+        // Action command
         response = intent.response || 'I\'ll help you with that.';
+
+        // --- LATENCY REDUCTION: EXECUTE DATA QUERIES IMMEDIATELY ---
+        // If the action is a database query (e.g. how many members in my house),
+        // we execute the query RIGHT NOW before we trigger the TTS, 
+        // and we overwrite the generic "I'll do that" text with the actual DB result.
+        if (intent.action?.name.startsWith('query_')) {
+          try {
+            console.log('⚡ Executing dynamic data query before speaking...');
+            const result = await actionEngine.executeAction(intent);
+
+            if (result && result.spokenResponse) {
+              response = result.spokenResponse;
+              console.log('🗣️ Overriding response with dynamically generated DB text:', response);
+            }
+
+            // Prevent it from trying to navigate or re-execute later since we just did it
+            intent.action.name = 'resolved_query';
+          } catch (e) {
+            console.error('Data query execution failed:', e);
+          }
+        }
       }
 
       return {
@@ -218,7 +251,7 @@ class VoiceOSService {
         intent: intent.type,
         action: intent.action,
         response,
-        shouldExecute: intent.type === 'action',
+        shouldExecute: intent.type === 'action' && intent.action?.name !== 'resolved_query',
       };
     } catch (error) {
       console.error('❌ Command processing failed:', error);
@@ -280,40 +313,92 @@ If the context doesn't contain the answer, say so politely and suggest what you 
 
   /**
    * 5️⃣ Text → Speech
-   * Speak the AI response
-   * Returns a promise that resolves when speech finishes
+   * Speak the AI response using Deepgram Aura TTS via Edge Function
    */
   async speak(text: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        console.log('🔊 Speaking:', text);
-        
-        Speech.speak(text, {
-          language: 'en-US',
-          pitch: 1.0,
-          rate: 0.9,
-          onDone: () => {
-            console.log('✅ Finished speaking');
-            resolve();
-          },
-          onStopped: () => {
-            console.log('🛑 Speech stopped');
-            resolve();
-          },
-          onError: (error) => {
-            console.error('❌ Speech error:', error);
-            reject(error);
-          },
-        });
-      } catch (error) {
-        console.error('❌ Text-to-speech failed:', error);
-        reject(error);
+    try {
+      console.log('🔊 Speaking:', text);
+
+      // Stop any currently playing sound
+      await this.stopSpeaking();
+
+      // Configure audio mode for playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
+
+      const endpoint = getSpeakEndpoint();
+      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, model: 'aura-asteria-en' }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch TTS audio: ${response.status}`);
       }
-    });
+
+      // Convert response stream to blob
+      const audioBlob = await response.blob();
+
+      return new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const base64data = reader.result as string;
+
+            // Create and load the sound
+            const { sound } = await Audio.Sound.createAsync(
+              { uri: base64data },
+              { shouldPlay: true }
+            );
+
+            this.sound = sound;
+
+            sound.setOnPlaybackStatusUpdate((status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                console.log('✅ Finished speaking');
+                sound.unloadAsync();
+                this.sound = null;
+                resolve();
+              }
+            });
+
+          } catch (error) {
+            console.error('❌ Audio Playback failed:', error);
+            reject(error);
+          }
+        };
+        reader.onerror = (error) => {
+          console.error('❌ FileReader error:', error);
+          reject(error);
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+
+    } catch (error) {
+      console.error('❌ Text-to-speech failed:', error);
+      throw error;
+    }
   }
 
-  stopSpeaking(): void {
-    Speech.stop();
+  async stopSpeaking(): Promise<void> {
+    if (this.sound) {
+      try {
+        await this.sound.stopAsync();
+        await this.sound.unloadAsync();
+        this.sound = null;
+      } catch (error) {
+        console.error('Error stopping speech:', error);
+      }
+    }
   }
 
   /**
@@ -325,10 +410,10 @@ If the context doesn't contain the answer, say so politely and suggest what you 
       // Step 1: Record audio
       await this.startRecording();
       console.log('🎤 Listening... (Speak now)');
-      
+
       // Wait for user to speak (in real implementation, use voice activity detection)
       // For now, caller controls when to stop
-      
+
       return {
         transcript: '',
         intent: 'recording',

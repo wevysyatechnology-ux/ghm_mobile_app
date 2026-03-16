@@ -1,11 +1,57 @@
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { Link, Handshake, Users, Grid } from 'lucide-react-native';
+import { Link, Handshake, Users, Grid, CalendarClock } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import DiscoverSection from '@/components/discover/DiscoverSection';
 import FloatingLogo from '@/components/shared/FloatingLogo';
+import { useAuth } from '@/contexts/AuthContext';
+import { LinksService } from '@/services/linksService';
+import type { User } from '@/types';
 
 export default function Discover() {
+  const { profile } = useAuth();
+  const [houseMembers, setHouseMembers] = useState<User[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  useEffect(() => {
+    const loadHouseMembers = async () => {
+      if (!profile?.house_id) {
+        setHouseMembers([]);
+        setMembersLoading(false);
+        return;
+      }
+
+      try {
+        setMembersLoading(true);
+        const members = await LinksService.getHouseMembers(profile.house_id);
+
+        const mappedMembers: User[] = members.map((member) => ({
+          id: member.id,
+          name: member.full_name || 'Member',
+          email: '',
+          phone_number: member.phone_number,
+          category: member.business_category || 'Business',
+          location: [member.city, member.state].filter(Boolean).join(', ') || 'Location not set',
+          circle: member.vertical_type === 'inner_circle' ? 'inner' : 'open',
+          tier: 'regular',
+          profile_photo: undefined,
+          is_online: false,
+          created_at: member.created_at,
+        }));
+
+        setHouseMembers(mappedMembers);
+      } catch (error) {
+        console.error('Error loading house members for Discover:', error);
+        setHouseMembers([]);
+      } finally {
+        setMembersLoading(false);
+      }
+    };
+
+    loadHouseMembers();
+  }, [profile?.house_id]);
+
   const quickChannels = [
     {
       slug: 'links',
@@ -13,6 +59,7 @@ export default function Discover() {
       title: 'Links',
       subtitle: 'Send and receive business referrals',
       color: colors.accent_green_bright,
+      route: '/links-form' as const,
     },
     {
       slug: 'deals',
@@ -20,6 +67,7 @@ export default function Discover() {
       title: 'Deals',
       subtitle: 'Share and close transactions',
       color: colors.accent_green_bright,
+      route: '/deals-form' as const,
     },
     {
       slug: '12we-meetings',
@@ -27,6 +75,15 @@ export default function Discover() {
       title: '12we Meetings',
       subtitle: 'Connect with house members',
       color: colors.accent_green_bright,
+      route: '/i2we-form' as const,
+    },
+    {
+      slug: 'event-meetings',
+      icon: CalendarClock,
+      title: 'Event Meetings',
+      subtitle: 'Upcoming & completed house events',
+      color: colors.accent_green_bright,
+      route: '/event-meetings' as const,
     },
   ];
 
@@ -47,10 +104,7 @@ export default function Discover() {
               <TouchableOpacity
                 key={channel.slug}
                 style={styles.quickChannelCard}
-                onPress={() => router.push({
-                  pathname: '/channel-detail',
-                  params: { channelSlug: channel.slug }
-                })}
+                onPress={() => router.push(channel.route)}
                 activeOpacity={0.8}
               >
                 <View style={styles.quickChannelIconContainer}>
@@ -79,9 +133,21 @@ export default function Discover() {
           </View>
         </TouchableOpacity>
 
-        <DiscoverSection title="Members Near You" />
-        <DiscoverSection title="Top Professionals" />
-        <DiscoverSection title="Recommended for You" />
+        <DiscoverSection
+          title="Members Near You"
+          members={houseMembers}
+          isLoading={membersLoading}
+        />
+        <DiscoverSection
+          title="Top Professionals"
+          members={houseMembers}
+          isLoading={membersLoading}
+        />
+        <DiscoverSection
+          title="Recommended for You"
+          members={houseMembers}
+          isLoading={membersLoading}
+        />
       </ScrollView>
     </View>
   );
@@ -109,12 +175,13 @@ const styles = StyleSheet.create({
   },
   quickChannelsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
     gap: spacing.md,
   },
   quickChannelCard: {
-    flex: 1,
+    width: '47%',
     backgroundColor: 'rgba(52, 211, 153, 0.1)',
     borderRadius: 16,
     padding: spacing.lg,

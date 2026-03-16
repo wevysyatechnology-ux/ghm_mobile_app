@@ -79,6 +79,8 @@ export interface CoreLink {
 export interface CoreDeal {
   id: string;
   creator_id: string;
+  from_member_id: string | null;
+  to_member_id: string | null;
   house_id: string | null;
   title: string;
   description: string | null;

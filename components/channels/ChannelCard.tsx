@@ -1,4 +1,16 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  Link as LinkIcon,
+  Handshake,
+  Users,
+  UserPlus,
+  Briefcase,
+  TrendingUp,
+  HelpCircle,
+  Megaphone,
+  Bell,
+  User,
+} from 'lucide-react-native';
 import { Channel } from '@/types/database';
 import { COLORS, SPACING, TYPOGRAPHY, RADIUS } from '@/constants/theme';
 
@@ -6,22 +18,72 @@ interface ChannelCardProps {
   channel: Channel;
   onPress: (channel: Channel) => void;
   isPriority?: boolean;
+  disabled?: boolean;
+  descriptionOverride?: string;
 }
 
-export function ChannelCard({ channel, onPress, isPriority }: ChannelCardProps) {
+const getChannelIcon = (channel: Channel) => {
+  const slug = (channel.slug || '').toLowerCase();
+  const name = (channel.name || '').toLowerCase();
+
+  if (slug.includes('link') || name.includes('link')) return LinkIcon;
+  if (slug.includes('deal') || name.includes('deal')) return Handshake;
+  if (
+    slug.includes('i2we') ||
+    slug.includes('12we') ||
+    slug.includes('meeting') ||
+    name.includes('i2we') ||
+    name.includes('meeting')
+  ) {
+    return Users;
+  }
+  if (slug.includes('visitor') || name.includes('visitor')) return UserPlus;
+  if (slug.includes('job') || name.includes('job')) return Briefcase;
+  if (slug.includes('opportun') || name.includes('opportun')) return TrendingUp;
+  if (slug.includes('ask') || name.includes('ask')) return HelpCircle;
+  if (slug.includes('announc') || name.includes('announc')) return Megaphone;
+  if (slug.includes('notif') || name.includes('notif')) return Bell;
+
+  return User;
+};
+
+export function ChannelCard({
+  channel,
+  onPress,
+  isPriority,
+  disabled = false,
+  descriptionOverride,
+}: ChannelCardProps) {
+  const IconComponent = getChannelIcon(channel);
+  const isI2WEChannel =
+    (channel.slug || '').toLowerCase().includes('i2we') ||
+    (channel.slug || '').toLowerCase().includes('12we') ||
+    (channel.slug || '').toLowerCase().includes('meeting') ||
+    (channel.name || '').toLowerCase().includes('i2we') ||
+    (channel.name || '').toLowerCase().includes('meeting');
+
+  const displayDescription = descriptionOverride ||
+    (isI2WEChannel ? 'Track one-on-one meetings' : channel.description);
+
   return (
     <TouchableOpacity
-      style={[styles.card, isPriority && styles.priorityCard]}
+      style={[styles.card, isPriority && styles.priorityCard, disabled && styles.disabledCard]}
       onPress={() => onPress(channel)}
-      activeOpacity={0.7}
+      activeOpacity={disabled ? 1 : 0.7}
+      disabled={disabled}
     >
-      <View style={[styles.iconContainer, isPriority && styles.priorityIconContainer]}>
-        <Text style={styles.icon}>{channel.icon}</Text>
+      <View
+        style={[
+          styles.iconContainer,
+          isPriority && styles.priorityIconContainer,
+          disabled && styles.disabledIconContainer,
+        ]}>
+        <IconComponent size={26} color={COLORS.primary} />
       </View>
       <View style={styles.content}>
         <Text style={[styles.title, isPriority && styles.priorityTitle]}>{channel.name}</Text>
         <Text style={styles.description} numberOfLines={3}>
-          {channel.description}
+          {displayDescription}
         </Text>
       </View>
     </TouchableOpacity>
@@ -44,6 +106,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 211, 153, 0.3)',
     borderWidth: 1.5,
   },
+  disabledCard: {
+    opacity: 0.75,
+  },
   iconContainer: {
     width: 56,
     height: 56,
@@ -56,22 +121,23 @@ const styles = StyleSheet.create({
   priorityIconContainer: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
   },
-  icon: {
-    fontSize: 28,
+  disabledIconContainer: {
+    opacity: 0.85,
   },
   content: {
     flex: 1,
   },
   title: {
+    fontFamily: 'Poppins-Medium',
     fontSize: TYPOGRAPHY.sizes.lg,
-    fontWeight: '600',
     color: COLORS.text,
     marginBottom: SPACING.xs,
   },
   priorityTitle: {
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
   },
   description: {
+    fontFamily: 'Poppins-Regular',
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.textSecondary,
     lineHeight: 20,

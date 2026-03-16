@@ -5,7 +5,9 @@
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import {
   NotificationPayload,
@@ -119,9 +121,10 @@ class NotificationService {
    */
   async registerForPushNotifications(): Promise<string | null> {
     try {
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'your-project-id',
-      });
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        '1b21598b-62b1-44b3-a5f6-af02bb39dff1';
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
 
       return tokenData.data;
     } catch (error) {
@@ -210,9 +213,15 @@ class NotificationService {
     // Navigate to appropriate screen
     const screen = NotificationNavigationMap[payload.type];
     if (screen) {
-      // You'll need to implement navigation logic here
-      // Example: router.push(screen)
       console.log('🚀 Navigate to:', screen);
+      // Build params for event-related notifications so the screen can
+      // highlight the specific event if an eventId is provided.
+      const eventId = (payload.data as any)?.eventId;
+      if (screen === '/event-meetings' && eventId) {
+        router.push({ pathname: '/event-detail', params: { eventId } } as any);
+      } else {
+        router.push(screen as any);
+      }
     }
 
     // Mark notification as read if ID is in data

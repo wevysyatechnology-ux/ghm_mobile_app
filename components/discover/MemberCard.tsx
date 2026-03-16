@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, Linking } from 'react-native';
 import { Phone, User as UserIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { colors, spacing, fontSize, borderRadius } from '@/constants/theme';
@@ -10,17 +10,38 @@ interface MemberCardProps {
 
 export default function MemberCard({ member }: MemberCardProps) {
   const router = useRouter();
-  const canCall = member.circle === 'inner';
+  const phoneNumber = member.phone_number?.trim() || '';
+  const canCall = phoneNumber.length > 0;
 
-  const handleCall = () => {
-    if (canCall) {
-      router.push({
-        pathname: '/call',
-        params: {
-          name: member.name,
-          photo: member.profile_photo || '',
-        },
-      });
+  const handleViewProfile = () => {
+    router.push({
+      pathname: '/member-profile',
+      params: {
+        id: member.id,
+        name: member.name,
+        category: member.category,
+        location: member.location,
+        circle: member.circle,
+        tier: member.tier,
+        phone_number: phoneNumber,
+        profile_photo: member.profile_photo || '',
+      },
+    });
+  };
+
+  const handleCall = async () => {
+    if (!canCall) {
+      Alert.alert('Phone unavailable', 'No phone number is available for this member.');
+      return;
+    }
+
+    const dialableNumber = phoneNumber.replace(/\s+/g, '');
+    const dialUrl = `tel:${dialableNumber}`;
+
+    try {
+      await Linking.openURL(dialUrl);
+    } catch {
+      Alert.alert('Unable to call', 'Could not open the phone dialer.');
     }
   };
 
@@ -71,6 +92,7 @@ export default function MemberCard({ member }: MemberCardProps) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.viewButton}
+          onPress={handleViewProfile}
           activeOpacity={0.7}>
           <Text style={styles.viewButtonText}>View Profile</Text>
         </TouchableOpacity>
@@ -135,17 +157,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   name: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   category: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
     marginBottom: spacing.xs,
   },
   location: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.xs,
     color: colors.text_secondary,
     marginBottom: spacing.sm,
@@ -157,8 +181,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.button,
   },
   badgeText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.xs,
-    fontWeight: '600',
   },
   actions: {
     flexDirection: 'row',
@@ -173,8 +197,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.sm,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
   callButton: {

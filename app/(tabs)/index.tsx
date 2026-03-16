@@ -1,15 +1,14 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox } from 'lucide-react-native';
+import { Link, Handshake, Users, TrendingUp, Calendar, ChevronRight, Send, Inbox, CalendarClock } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import AnimatedBackground from '@/components/shared/AnimatedBackground';
 import GradientText from '@/components/shared/GradientText';
 import FloatingLogo from '@/components/shared/FloatingLogo';
-import AIInputBar from '@/components/ai/AIInputBar';
-import FloatingVoiceButton from '@/components/ai/FloatingVoiceButton';
 import SmartPromptChips from '@/components/ai/SmartPromptChips';
 import AIResponseToast from '@/components/ai/AIResponseToast';
+import AIInputBar from '@/components/ai/AIInputBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/contexts/AIContext';
 import { AIService } from '@/services/aiService';
@@ -20,17 +19,18 @@ import { I2WEService } from '@/services/i2weService';
 import { voiceOS } from '@/services/voiceOSService';
 import { actionEngine } from '@/services/actionEngine';
 import { knowledgeService } from '@/services/knowledgeService';
+import { ActivityService } from '@/services/activityService';
+import ActivityFeedItem from '@/components/activity/ActivityFeedItem';
+import { Activity } from '@/types';
 
 export default function Home() {
   const { profile } = useAuth();
   const { processIntent } = useAI();
-  const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
-  const [toastMessage, setToastMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
   const [linksGivenCount, setLinksGivenCount] = useState(0);
   const [linksReceivedCount, setLinksReceivedCount] = useState(0);
   const [closedDealsCount, setClosedDealsCount] = useState(0);
   const [meetingsCount, setMeetingsCount] = useState(0);
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     loadStats();
@@ -38,17 +38,19 @@ export default function Home() {
 
   const loadStats = async () => {
     try {
-      const [linksGiven, linksReceived, closedDeals, meetings] = await Promise.all([
+      const [linksGiven, linksReceived, closedDeals, meetings, activities] = await Promise.all([
         LinksService.getLinksGivenCount(),
         LinksService.getLinksReceivedCount(),
         DealsService.getClosedDealsCount(),
         I2WEService.getMeetingsCount(),
+        ActivityService.getRecentActivities(3),
       ]);
 
       setLinksGivenCount(linksGiven);
       setLinksReceivedCount(linksReceived);
       setClosedDealsCount(closedDeals);
       setMeetingsCount(meetings);
+      setRecentActivities(activities);
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -57,20 +59,22 @@ export default function Home() {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'links':
-        router.push('/links-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: 'links' } });
         break;
       case 'deals':
-        router.push('/deals-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: 'deals' } });
         break;
       case 'connect':
-        router.push('/i2we-form');
+        router.push({ pathname: '/channel-detail', params: { channelId: '', channelSlug: '12we-meetings' } });
+        break;
+      case 'events':
+        router.push('/event-meetings' as any);
         break;
     }
   };
 
   const handlePromptPress = async (prompt: string) => {
     try {
-      setOrbState('thinking');
       console.log('💡 Processing prompt:', prompt);
 
       // Use Voice OS pipeline for consistent AI processing
@@ -85,12 +89,6 @@ export default function Home() {
       const intent = await actionEngine.classifyIntent(prompt, context);
       console.log('🎯 Intent:', intent.type, intent.category);
 
-      setOrbState('responding');
-
-      // Show and speak the response
-      setToastMessage(intent.response);
-      setShowToast(true);
-      
       try {
         await voiceOS.speak(intent.response);
       } catch (speakError) {
@@ -103,103 +101,13 @@ export default function Home() {
           router.push(intent.action!.screen as any);
         }, 1500);
       }
-
-      setTimeout(() => setOrbState('idle'), 2000);
     } catch (error) {
       console.error('❌ Prompt processing error:', error);
-      setOrbState('idle');
-      setToastMessage('Sorry, I couldn\'t process that. Please check your connection.');
-      setShowToast(true);
-    }
-  };
-
-  const handleMicPress = async () => {
-    // Check if running on web - voice recording has limited support
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Voice Input Not Available on Web',
-        'Voice recording works best on mobile devices. Please use the text input instead, or test on a physical device/simulator.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    try {
-      setOrbState('listening');
-      console.log('🎤 Starting voice recording...');
-
-      // Start recording
-      await voiceOS.startRecording();
-      console.log('✅ Recording started');
-
-      // Auto-stop after 5 seconds (or implement manual stop button)
-      setTimeout(async () => {
-        try {
-          setOrbState('thinking');
-          console.log('🛑 Stopping recording...');
-
-          // Transcribe audio using Whisper
-          const transcript = await voiceOS.stopRecordingAndTranscribe();
-          console.log('📝 Transcribed:', transcript);
-          
-          if (!transcript || transcript.trim().length === 0) {
-            throw new Error('No speech detected');
-          }
-
-          // Get context and classify intent
-          let context = '';
-          try {
-            context = await knowledgeService.searchKnowledge(transcript);
-            console.log('📚 Context retrieved');
-          } catch (error) {
-            console.log('⚠️ Context search failed, using default');
-            context = 'WeVysya is a business community network.';
-          }
-
-          const intent = await actionEngine.classifyIntent(transcript, context);
-          console.log('🎯 Intent:', intent.type, intent.category);
-
-          setOrbState('responding');
-
-          // Show and speak the response
-          setToastMessage(intent.response);
-          setShowToast(true);
-          
-          try {
-            await voiceOS.speak(intent.response);
-          } catch (speakError) {
-            console.log('⚠️ Text-to-speech failed');
-          }
-
-          // Execute action if needed
-          if (intent.type === 'action' && intent.action?.screen) {
-            setTimeout(() => {
-              router.push(intent.action!.screen as any);
-            }, 1500);
-          }
-
-          setTimeout(() => setOrbState('idle'), 2000);
-        } catch (error) {
-          console.error('❌ Voice processing error:', error);
-          setOrbState('idle');
-          
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          setToastMessage(`Voice processing failed: ${errorMessage}. Please try text input instead.`);
-          setShowToast(true);
-        }
-      }, 5000); // Stop recording after 5 seconds
-
-    } catch (error) {
-      console.error('❌ Microphone error:', error);
-      setOrbState('idle');
-      setToastMessage('Could not access microphone. Please check permissions and try again.');
-      setShowToast(true);
     }
   };
 
   const handleTextSubmit = async (text: string) => {
     try {
-      setOrbState('thinking');
       console.log('💬 Processing text input:', text);
 
       // Use Voice OS pipeline for proper AI processing
@@ -217,12 +125,6 @@ export default function Home() {
       const intent = await actionEngine.classifyIntent(text, context);
       console.log('🎯 Intent classified:', intent.type, intent.category);
 
-      setOrbState('responding');
-
-      // Show the response
-      setToastMessage(intent.response);
-      setShowToast(true);
-
       // Speak the response
       try {
         await voiceOS.speak(intent.response);
@@ -236,15 +138,8 @@ export default function Home() {
           router.push(intent.action!.screen as any);
         }, 1500);
       }
-
-      setTimeout(() => setOrbState('idle'), 2000);
     } catch (error) {
       console.error('❌ Text processing error:', error);
-      setOrbState('idle');
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setToastMessage(`Processing failed: ${errorMessage}. Please check your connection and try again.`);
-      setShowToast(true);
     }
   };
 
@@ -268,7 +163,7 @@ export default function Home() {
 
         <View style={styles.aiSection}>
           <Text style={styles.aiSectionTitle}>Ask WeVysya Assistant</Text>
-          <AIInputBar onMicPress={handleMicPress} onTextSubmit={handleTextSubmit} />
+          <AIInputBar onMicPress={() => { }} onTextSubmit={handleTextSubmit} />
           <SmartPromptChips onPromptPress={handlePromptPress} />
         </View>
 
@@ -301,6 +196,16 @@ export default function Home() {
               <Users size={28} color={colors.accent_green_bright} strokeWidth={2.5} />
             </View>
             <Text style={styles.actionTitle}>i2we</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.primaryAction}
+            onPress={() => handleQuickAction('events')}
+            activeOpacity={0.8}>
+            <View style={styles.actionIconBox}>
+              <CalendarClock size={28} color={colors.accent_green_bright} strokeWidth={2.5} />
+            </View>
+            <Text style={styles.actionTitle}>Events</Text>
           </TouchableOpacity>
         </View>
 
@@ -343,12 +248,18 @@ export default function Home() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No recent activity yet</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Start sending links and making deals
-            </Text>
-          </View>
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity) => (
+              <ActivityFeedItem key={activity.id} activity={activity} />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No recent activity yet</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Start sending links and making deals
+              </Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity
@@ -360,17 +271,7 @@ export default function Home() {
         </TouchableOpacity>
 
       </ScrollView>
-      <FloatingVoiceButton
-        onPress={handleMicPress}
-        isActive={orbState === 'listening'}
-      />
-      <AIResponseToast
-        message={toastMessage}
-        visible={showToast}
-        onHide={() => setShowToast(false)}
-        duration={3000}
-      />
-    </View>
+    </View >
   );
 }
 
@@ -388,31 +289,33 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   greeting: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 32,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: spacing.sm,
     lineHeight: 40,
     marginTop: spacing.md,
   },
   name: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 40,
-    fontWeight: '900',
     letterSpacing: -1,
   },
   subtitle: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_muted,
     marginTop: spacing.xs,
   },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.xl,
     marginBottom: spacing.xxl,
     gap: spacing.md,
   },
   primaryAction: {
-    flex: 1,
+    width: '47%',
     backgroundColor: 'rgba(22, 33, 28, 0.95)',
     borderRadius: 20,
     padding: spacing.lg,
@@ -430,8 +333,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   actionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
-    fontWeight: '700',
     color: colors.text_primary,
     textAlign: 'center',
   },
@@ -455,12 +358,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   statValue: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   statLabel: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 12,
     color: colors.text_muted,
     textAlign: 'center',
@@ -476,13 +380,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 22,
-    fontWeight: '700',
     color: colors.text_primary,
   },
   seeAll: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 15,
-    fontWeight: '600',
     color: colors.accent_green_bright,
   },
   emptyState: {
@@ -494,12 +398,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border_secondary,
   },
   emptyStateText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text_secondary,
     marginBottom: spacing.xs,
   },
   emptyStateSubtext: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_muted,
     textAlign: 'center',
@@ -516,8 +421,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 211, 153, 0.3)',
   },
   discoverButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.accent_green_bright,
     marginRight: spacing.xs,
   },
@@ -526,8 +431,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   aiSectionTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 18,
-    fontWeight: '700',
     color: colors.text_primary,
     marginBottom: spacing.md,
   },

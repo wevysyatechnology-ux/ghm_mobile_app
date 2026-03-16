@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Mic, MicOff, Volume2, Copy, RotateCw } from 'lucide-react-native';
+import { Mic, MicOff, Volume2, Copy, RotateCw, Square } from 'lucide-react-native';
 
 import { voiceOS } from '@/services/voiceOSService';
 import { actionEngine } from '@/services/actionEngine';
@@ -53,18 +53,18 @@ export default function VoiceAssistantScreen() {
   // Initialize voice OS and knowledge base
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     const initialize = async () => {
       try {
         console.log('🚀 Initializing WeVysya Voice OS...');
-        
+
         // Load knowledge base
         await loadKnowledgeBase();
         console.log('✅ Knowledge base loaded');
-        
+
         // Initialize voice OS
         voiceOS.activateWakeWord();
-        
+
         if (isMountedRef.current) {
           setInitialized(true);
         }
@@ -100,7 +100,7 @@ export default function VoiceAssistantScreen() {
       if (animationLoopRef.current) {
         animationLoopRef.current.stop();
       }
-      
+
       // Create and start new animation
       const loop = Animated.loop(
         Animated.sequence([
@@ -126,7 +126,7 @@ export default function VoiceAssistantScreen() {
       }
       pulseAnim.setValue(1);
     }
-    
+
     // Cleanup on unmount or status change
     return () => {
       if (animationLoopRef.current) {
@@ -142,6 +142,13 @@ export default function VoiceAssistantScreen() {
    */
   const handleMicPress = async () => {
     try {
+      if (state.status === 'speaking') {
+        console.log('🛑 Stopping AI voice...');
+        await voiceOS.stopSpeaking();
+        setState(prev => ({ ...prev, status: 'idle' }));
+        return;
+      }
+
       if (state.status === 'listening') {
         // Stop recording and process
         await handleStopListening();
@@ -179,30 +186,24 @@ export default function VoiceAssistantScreen() {
       const transcript = await voiceOS.stopRecordingAndTranscribe();
       setState(prev => ({ ...prev, transcript }));
 
-      // Get relevant context
-      const context = await knowledgeService.searchKnowledge(transcript);
-
-      // Classify intent (single source of truth)
-      const intent = await actionEngine.classifyIntent(transcript, context);
+      // Process command using the optimized pipeline
+      const result = await voiceOS.processCommand(transcript);
 
       // Update state
       setState(prev => ({
         ...prev,
         status: 'speaking',
-        response: intent.response,
-        intent: intent.type,
-        confidence: intent.confidence,
+        response: result.response,
+        intent: result.intent,
+        confidence: 1,
       }));
 
       // Speak response
-      await voiceOS.speak(intent.response);
+      await voiceOS.speak(result.response);
 
       // Execute action if needed
-      if (intent.type === 'action' && intent.action) {
-        // Navigate to appropriate screen
-        if (intent.action.screen) {
-          router.push(intent.action.screen as any);
-        }
+      if (result.shouldExecute && result.action?.screen) {
+        router.push(result.action.screen as any);
       }
 
       setState(prev => ({ ...prev, status: 'idle' }));
@@ -238,25 +239,22 @@ export default function VoiceAssistantScreen() {
     try {
       setState(prev => ({ ...prev, status: 'processing' }));
 
-      // Get relevant context
-      const context = await knowledgeService.searchKnowledge(text);
-      
-      // Classify intent (single source of truth)
-      const intent = await actionEngine.classifyIntent(text, context);
+      // Process command using the optimized pipeline
+      const result = await voiceOS.processCommand(text);
 
       setState(prev => ({
         ...prev,
         status: 'speaking',
-        response: intent.response,
+        response: result.response,
         transcript: text,
-        intent: intent.type,
-        confidence: intent.confidence,
+        intent: result.intent,
+        confidence: 1,
       }));
 
-      await voiceOS.speak(intent.response);
+      await voiceOS.speak(result.response);
 
-      if (intent.type === 'action' && intent.action?.screen) {
-        router.push(intent.action.screen as any);
+      if (result.shouldExecute && result.action?.screen) {
+        router.push(result.action.screen as any);
       }
 
       setState(prev => ({ ...prev, status: 'idle' }));
@@ -286,7 +284,16 @@ export default function VoiceAssistantScreen() {
 
       {/* Main Mic Button */}
       <View className="flex-1 items-center justify-center py-8">
-        {isListening ? (
+        {isSpeaking ? (
+          <Animated.View
+            style={{
+              transform: [{ scale: pulseAnim }],
+            }}
+            className="w-32 h-32 rounded-full bg-red-500 items-center justify-center mb-4"
+          >
+            <Square size={64} fill="white" color="white" />
+          </Animated.View>
+        ) : isListening ? (
           <Animated.View
             style={{
               transform: [{ scale: pulseAnim }],
@@ -304,12 +311,11 @@ export default function VoiceAssistantScreen() {
         <Pressable
           onPress={handleMicPress}
           disabled={!initialized}
-          className={`px-8 py-4 rounded-full mb-4 ${
-            isListening ? 'bg-red-500' : 'bg-blue-600'
-          } ${!initialized ? 'opacity-50' : ''}`}
+          className={`px-8 py-4 rounded-full mb-4 ${isListening || isSpeaking ? 'bg-red-500' : 'bg-blue-600'
+            } ${!initialized ? 'opacity-50' : ''}`}
         >
           <Text className="text-white font-bold text-lg">
-            {isListening ? '🛑 Stop' : '🎤 Start Listening'}
+            {isSpeaking ? '🛑 Stop AI Voice' : isListening ? '🛑 Stop Recording' : '🎤 Start Listening'}
           </Text>
         </Pressable>
 

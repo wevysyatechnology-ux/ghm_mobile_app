@@ -1,4 +1,4 @@
-# Wevysya Database Setup Guide
+# WeVysya Database Setup Guide
 
 Your Supabase database connection is configured and ready. Now you need to create the database tables by running the migration files.
 

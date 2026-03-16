@@ -8,14 +8,15 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { router } from 'expo-router';
 import { ChevronLeft, User, Calendar } from 'lucide-react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { colors, spacing } from '@/constants/theme';
 import { I2WEService } from '@/services/i2weService';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
-import { sendI2WEMeetingScheduledNotification } from '@/utils/notificationHelpers';
+import { sendI2WEMeetingRecordedNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function I2WEForm() {
@@ -25,11 +26,30 @@ export default function I2WEForm() {
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
   const [houses, setHouses] = useState<any[]>([]);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [formData, setFormData] = useState({
     meeting_date: '',
     notes: '',
   });
+
+  const maximumMeetingDate = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
+
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const maxDateString = useMemo(
+    () => formatDateForInput(maximumMeetingDate),
+    [maximumMeetingDate]
+  );
 
   useEffect(() => {
     loadUserHouses();
@@ -63,6 +83,32 @@ export default function I2WEForm() {
     }
   };
 
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+
+    if (event.type !== 'set' || !selectedDate) {
+      return;
+    }
+
+    const selectedDateString = formatDateForInput(selectedDate);
+
+    if (selectedDateString > maxDateString) {
+      Alert.alert('Invalid Date', 'Please select today or a past date.');
+      return;
+    }
+
+    setFormData((previous) => ({
+      ...previous,
+      meeting_date: selectedDateString,
+    }));
+
+    if (Platform.OS === 'ios') {
+      setShowDatePicker(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedMember) {
       Alert.alert('Error', 'Please select a house member');
@@ -71,6 +117,11 @@ export default function I2WEForm() {
 
     if (!formData.meeting_date) {
       Alert.alert('Error', 'Please select a meeting date');
+      return;
+    }
+
+    if (formData.meeting_date > maxDateString) {
+      Alert.alert('Error', 'Please choose today or a past date for the meeting');
       return;
     }
 
@@ -83,11 +134,11 @@ export default function I2WEForm() {
 
       // Send notification to the selected member
       if (profile) {
-        await sendI2WEMeetingScheduledNotification({
+        await sendI2WEMeetingRecordedNotification({
           recipientId: selectedMember.id,
           meetingId: result?.id || '',
-          schedulerName: profile.full_name || 'A member',
-          schedulerId: profile.id,
+          recorderName: profile.full_name || 'A member',
+          recorderId: profile.id,
           meetingDate: formData.meeting_date,
           notes: formData.notes,
         });
@@ -100,14 +151,14 @@ export default function I2WEForm() {
       });
       setSelectedMember(null);
 
-      Alert.alert('Success', 'Meeting scheduled successfully', [
+      Alert.alert('Success', 'Meeting recorded successfully', [
         {
           text: 'OK',
           onPress: () => router.replace('/(tabs)'),
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to schedule meeting');
+      Alert.alert('Error', 'Failed to record meeting');
     }
   };
 
@@ -117,10 +168,14 @@ export default function I2WEForm() {
         <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schedule I2WE Meeting</Text>
+        <Text style={styles.headerTitle}>Log I2WE Meeting</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled">
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>I2WE - I to WE</Text>
           <Text style={styles.infoDescription}>
@@ -141,7 +196,10 @@ export default function I2WEForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <ScrollView style={styles.memberList}>
+          <ScrollView
+            style={styles.memberList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled">
             {houseMembers.map((member) => (
               <TouchableOpacity
                 key={member.id}
@@ -162,17 +220,48 @@ export default function I2WEForm() {
         <Text style={styles.label}>
           Meeting Date <Text style={styles.required}>*</Text>
         </Text>
-        <View style={styles.dateInputContainer}>
-          <Calendar size={20} color={colors.text_secondary} />
-          <TextInput
-            style={styles.dateInput}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.text_tertiary}
-            value={formData.meeting_date}
-            onChangeText={(text) => setFormData({ ...formData, meeting_date: text })}
+        {Platform.OS === 'web' ? (
+          <View style={styles.dateInputContainer}>
+            <Calendar size={20} color={colors.text_secondary} />
+            <input
+              type="date"
+              max={maxDateString}
+              value={formData.meeting_date}
+              onChange={(event) => {
+                setFormData((previous) => ({
+                  ...previous,
+                  meeting_date: event.target.value,
+                }));
+              }}
+              style={styles.webDateInput as any}
+            />
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.dateInputContainer}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.8}>
+            <Calendar size={20} color={colors.text_secondary} />
+            <Text style={[styles.dateInput, !formData.meeting_date && styles.datePlaceholder]}>
+              {formData.meeting_date || 'Select meeting date'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {Platform.OS !== 'web' && showDatePicker && (
+          <DateTimePicker
+            value={
+              formData.meeting_date
+                ? new Date(`${formData.meeting_date}T00:00:00`)
+                : maximumMeetingDate
+            }
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={maximumMeetingDate}
+            onChange={handleDateChange}
           />
-        </View>
-        <Text style={styles.hint}>Format: YYYY-MM-DD (e.g., 2024-12-25)</Text>
+        )}
+        <Text style={styles.hint}>Only today or past dates are allowed</Text>
 
         <Text style={styles.label}>Meeting Notes</Text>
         <TextInput
@@ -186,7 +275,7 @@ export default function I2WEForm() {
         />
 
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Schedule Meeting</Text>
+          <Text style={styles.submitButtonText}>Save Meeting</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -317,13 +406,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text_primary,
   },
+  datePlaceholder: {
+    color: colors.text_tertiary,
+  },
+  webDateInput: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    outlineStyle: 'none',
+    color: colors.text_primary,
+    fontSize: 16,
+    height: 44,
+  },
   hint: {
     fontSize: 12,
     color: colors.text_tertiary,
     marginTop: spacing.xs,
   },
   submitButton: {
-    backgroundColor: colors.accent_blue,
+    backgroundColor: colors.accent_green_bright,
     borderRadius: 12,
     padding: spacing.lg,
     alignItems: 'center',

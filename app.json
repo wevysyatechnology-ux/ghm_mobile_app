@@ -1,24 +1,40 @@
 {
   "expo": {
-    "name": "Wevysya",
+    "name": "WeVysya",
     "slug": "wevysya-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/wevysya_logo_r.png",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash-transparent.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1F14"
+    },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "notification": {
-      "icon": "./assets/images/wevysya_logo_r.png",
+      "icon": "./assets/images/icon.png",
       "color": "#FF6B35",
       "androidMode": "default",
-      "androidCollapsedTitle": "Wevysya"
+      "androidCollapsedTitle": "WeVysya"
     },
     "android": {
+      "versionCode": 2,
       "package": "com.wevysya.app",
+      "googleServicesFile": "./google-services.json",
+      "splash": {
+        "image": "./assets/images/splash-transparent.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0B1F14",
+        "dark": {
+          "image": "./assets/images/splash-transparent.png",
+          "backgroundColor": "#0B1F14"
+        }
+      },
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/wevysya_logo_r.png",
-        "backgroundColor": "#0F172A"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#000000"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -31,27 +47,51 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/wevysya_logo_r.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B1F14",
+          "image": "./assets/images/splash-transparent.png",
+          "imageWidth": 1,
+          "resizeMode": "contain"
+        }
+      ],
       "expo-web-browser",
-      "expo-dev-client"
+      "expo-dev-client",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FF6B35",
+          "defaultChannel": "default",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
-      }
-    }
+        "projectId": "1b21598b-62b1-44b3-a5f6-af02bb39dff1"
+      },
+      "router": {}
+    },
+    "owner": "wevysya"
   }
 }

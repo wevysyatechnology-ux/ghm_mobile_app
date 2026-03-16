@@ -13,37 +13,41 @@ export interface CreateLinkData {
 
 export const LinksService = {
   async getHouseMembers(houseId: string): Promise<UserProfile[]> {
+    // Get current user to exclude them from the list
     const { data: userData } = await supabase.auth.getUser();
     const currentUserId = userData?.user?.id;
 
     try {
+      console.log('Fetching profiles via RPC for house_id:', houseId, 'currentUserId:', currentUserId);
+
+      // Call the secure RPC function to bypass RLS on the profiles table
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, business, mobile, zone, approval_status')
-        .eq('house_id', houseId)
-        .eq('approval_status', 'approved')
-        .neq('id', currentUserId);
+        .rpc('get_house_members', { p_house_id: houseId });
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        console.error('Error fetching house members via RPC:', profilesError);
         throw profilesError;
       }
 
+      console.log('Profiles found:', profilesData?.length || 0);
+
       if (!profilesData || profilesData.length === 0) {
+        console.log('No members found for house:', houseId);
         return [];
       }
 
-      const sortedProfiles = profilesData
-        .map((p: any) => ({
-          id: p.id,
-          full_name: p.full_name || 'Unknown',
-          phone_number: p.mobile || null,
-          business_category: p.business || '',
-          city: p.zone || '',
-        }))
-        .sort((a: any, b: any) => (a.full_name || '').localeCompare(b.full_name || ''));
+      // Filter out current user
+      const otherMembers = profilesData.filter((p: any) => p.id !== currentUserId);
 
-      return sortedProfiles;
+      console.log('Members after filtering current user:', otherMembers.length);
+
+      // Sort by full_name
+      const sortedProfiles = otherMembers.sort((a: any, b: any) =>
+        (a.full_name || '').localeCompare(b.full_name || '')
+      );
+
+      console.log(`Successfully loaded ${sortedProfiles.length} members for house ${houseId}`);
+      return sortedProfiles as UserProfile[];
     } catch (error) {
       console.error('Error in getHouseMembers:', error);
       throw error;
@@ -79,7 +83,7 @@ export const LinksService = {
         console.error('LinksService.createLink - error:', error);
         throw error;
       }
-      
+
       console.log('LinksService.createLink - success:', data);
       return data;
     } catch (error) {

@@ -5,15 +5,17 @@ import { ChevronLeft, User, Flame } from 'lucide-react-native';
 import { colors, spacing } from '@/constants/theme';
 import { LinksService } from '@/services/linksService';
 import { UserProfile } from '@/types/database';
-import { sendLinkReceivedNotification } from '@/utils/notificationHelpers';
+import { sendLinkReceivedNotification, sendLinkSentNotification } from '@/utils/notificationHelpers';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LinksForm() {
   const { profile } = useAuth();
   const [selectedMember, setSelectedMember] = useState<UserProfile | null>(null);
+  const [selectedHouse, setSelectedHouse] = useState<any>(null);
   const [houseMembers, setHouseMembers] = useState<UserProfile[]>([]);
-  const [currentHouseId, setCurrentHouseId] = useState<string | null>(null);
+  const [houses, setHouses] = useState<any[]>([]);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -25,17 +27,42 @@ export default function LinksForm() {
   });
 
   useEffect(() => {
-    loadHouseMembers();
+    loadUserHouses();
   }, []);
 
-  const loadHouseMembers = async () => {
+  useEffect(() => {
+    if (selectedHouse) {
+      loadHouseMembers();
+    }
+  }, [selectedHouse]);
+
+  const loadUserHouses = async () => {
     try {
-      const houses = await LinksService.getUserHouses();
-      if (houses.length === 0) return;
-      const houseId = houses[0].id;
-      setCurrentHouseId(houseId);
-      const members = await LinksService.getHouseMembers(houseId);
+      const data = await LinksService.getUserHouses();
+      setHouses(data);
+      if (data.length > 0) {
+        setSelectedHouse(data[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load houses');
+    }
+  };
+
+  const loadHouseMembers = async () => {
+    if (!selectedHouse) return;
+    try {
+      console.log('Loading members for house:', selectedHouse.house_name || selectedHouse.id);
+      const members = await LinksService.getHouseMembers(selectedHouse.id);
+      console.log('Loaded members:', members.length);
       setHouseMembers(members);
+
+      if (members.length === 0) {
+        Alert.alert(
+          'No Members Found',
+          'There are no other members in this house to send a link to.',
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error: any) {
       console.error('Error loading house members:', error);
       Alert.alert('Error', `Failed to load members: ${error.message || 'Unknown error'}`);
@@ -71,14 +98,26 @@ export default function LinksForm() {
       console.log('Link created successfully:', result);
 
       // Send notification to the recipient
-      if (profile && currentHouseId) {
+      if (profile && selectedHouse) {
+        // Notify Receiver
         await sendLinkReceivedNotification({
           recipientId: selectedMember.id,
           linkId: result?.id || '',
           senderName: profile.full_name || 'A member',
           senderId: profile.id,
-          houseName: 'Your House',
-          houseId: currentHouseId,
+          houseName: selectedHouse.house_name || 'Your House',
+          houseId: selectedHouse.id,
+          linkType: 'business',
+        });
+
+        // Notify Sender
+        await sendLinkSentNotification({
+          senderId: profile.id,
+          linkId: result?.id || '',
+          recipientName: selectedMember.full_name || 'A member',
+          recipientId: selectedMember.id,
+          houseName: selectedHouse.house_name || 'Your House',
+          houseId: selectedHouse.id,
           linkType: 'business',
         });
       }
@@ -106,22 +145,33 @@ export default function LinksForm() {
     }
   };
 
+  const filteredMembers = houseMembers.filter((member) =>
+    member.full_name?.toLowerCase().includes(memberSearchQuery.trim().toLowerCase())
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.backButton}>
           <ChevronLeft size={24} color={colors.text_primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Links Form</Text>
+        <Text style={styles.headerTitle}>Link Form</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>
           Send to <Text style={styles.required}>*</Text>
         </Text>
         <TouchableOpacity
           style={styles.picker}
-          onPress={() => setShowMemberPicker(!showMemberPicker)}>
+          onPress={() => {
+            setShowMemberPicker(!showMemberPicker);
+            setMemberSearchQuery('');
+          }}>
           <User size={20} color={colors.text_secondary} />
           <Text style={styles.pickerText}>
             {selectedMember ? selectedMember.full_name : 'Choose Member'}
@@ -129,21 +179,36 @@ export default function LinksForm() {
         </TouchableOpacity>
 
         {showMemberPicker && (
-          <ScrollView style={styles.memberList}>
+          <ScrollView
+            style={styles.memberList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={styles.memberSearchInput}
+              placeholder="Search member by name"
+              placeholderTextColor={colors.text_tertiary}
+              value={memberSearchQuery}
+              onChangeText={setMemberSearchQuery}
+            />
             {houseMembers.length === 0 ? (
               <View style={styles.emptyMemberList}>
                 <Text style={styles.emptyMemberText}>
                   No other members found in this house
                 </Text>
               </View>
+            ) : filteredMembers.length === 0 ? (
+              <View style={styles.emptyMemberList}>
+                <Text style={styles.emptyMemberText}>No members match your search</Text>
+              </View>
             ) : (
-              houseMembers.map((member) => (
+              filteredMembers.map((member) => (
                 <TouchableOpacity
                   key={member.id}
                   style={styles.memberItem}
                   onPress={() => {
                     setSelectedMember(member);
                     setShowMemberPicker(false);
+                    setMemberSearchQuery('');
                   }}>
                   <Text style={styles.memberName}>{member.full_name}</Text>
                   <Text style={styles.memberDetails}>
@@ -259,8 +324,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   headerTitle: {
+    fontFamily: 'Poppins-Bold',
     fontSize: 24,
-    fontWeight: '700',
     color: colors.text_primary,
   },
   scrollView: {
@@ -271,8 +336,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   label: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
-    fontWeight: '600',
     color: colors.text_secondary,
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
@@ -282,8 +347,9 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: spacing.md,
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_primary,
     borderWidth: 1,
@@ -303,23 +369,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   pickerText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     color: colors.text_secondary,
     marginLeft: spacing.md,
   },
   memberList: {
     backgroundColor: colors.card_background,
-    borderRadius: 12,
+    borderRadius: 16,
     marginTop: spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     maxHeight: 200,
+  },
+  memberSearchInput: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    margin: spacing.sm,
+    marginBottom: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    color: colors.text_primary,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   memberItem: {
     padding: spacing.md,
@@ -327,12 +407,13 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   memberName: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 16,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   memberDetails: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_tertiary,
   },
@@ -348,22 +429,23 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   submitButton: {
-    backgroundColor: colors.accent_blue,
-    borderRadius: 12,
+    backgroundColor: colors.accent_green_bright,
+    borderRadius: 16,
     padding: spacing.lg,
     alignItems: 'center',
     marginTop: spacing.xxl,
   },
   submitButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text_primary,
+    color: colors.bg_primary,
   },
   emptyMemberList: {
     padding: spacing.lg,
     alignItems: 'center',
   },
   emptyMemberText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     color: colors.text_tertiary,
     textAlign: 'center',

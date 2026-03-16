@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.md,
   },
@@ -86,12 +86,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   circle: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '600',
     color: colors.text_primary,
     marginBottom: spacing.xs,
   },
   tier: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
   },
@@ -106,6 +107,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   infoText: {
+    fontFamily: 'Poppins-Regular',
     fontSize: fontSize.sm,
     color: colors.text_secondary,
   },
@@ -119,8 +121,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   upgradeButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.md,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
 });

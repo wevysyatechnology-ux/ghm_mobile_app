@@ -24,7 +24,7 @@ interface SendNotificationOptions {
 async function sendNotification(options: SendNotificationOptions): Promise<boolean> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    
+
     const response = await fetch(NOTIFICATION_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -75,6 +75,35 @@ export async function sendLinkReceivedNotification(params: {
       linkType: params.linkType,
     },
     priority: 'high',
+  });
+}
+
+/**
+ * 🔗 Send Link Sent Notification (for the sender)
+ */
+export async function sendLinkSentNotification(params: {
+  senderId: string;
+  linkId: string;
+  recipientName: string;
+  recipientId: string;
+  houseName: string;
+  houseId: string;
+  linkType: 'business' | 'personal';
+}): Promise<boolean> {
+  return sendNotification({
+    userId: params.senderId,
+    type: 'link_sent',
+    title: '✅ Link Sent Automatically',
+    body: `Your business link was successfully sent to ${params.recipientName} in ${params.houseName}.`,
+    data: {
+      linkId: params.linkId,
+      recipientName: params.recipientName,
+      recipientId: params.recipientId,
+      houseName: params.houseName,
+      houseId: params.houseId,
+      linkType: params.linkType,
+    },
+    priority: 'normal',
   });
 }
 
@@ -187,6 +216,33 @@ export async function sendI2WEMeetingScheduledNotification(params: {
       notes: params.notes,
     },
     priority: 'high',
+  });
+}
+
+/**
+ * 📅 Send I2WE Meeting Recorded Notification
+ */
+export async function sendI2WEMeetingRecordedNotification(params: {
+  recipientId: string;
+  meetingId: string;
+  recorderName: string;
+  recorderId: string;
+  meetingDate: string;
+  notes?: string;
+}): Promise<boolean> {
+  return sendNotification({
+    userId: params.recipientId,
+    type: 'i2we_meeting_recorded',
+    title: '✅ I2WE Meeting Recorded',
+    body: `${params.recorderName} recorded a completed 1-on-1 meeting with you on ${params.meetingDate}.`,
+    data: {
+      meetingId: params.meetingId,
+      recorderName: params.recorderName,
+      recorderId: params.recorderId,
+      meetingDate: params.meetingDate,
+      notes: params.notes,
+    },
+    priority: 'normal',
   });
 }
 
@@ -307,5 +363,41 @@ export async function sendBatchNotification(params: {
     body: params.body,
     data: params.data,
     priority: 'normal',
+  });
+}
+
+/**
+ * 📅 Send Event Created / Meeting Reminder Notification
+ * Notifies all house members when a new event is created or a reminder is due.
+ */
+export async function sendEventCreatedNotification(params: {
+  userIds: string[];
+  eventId: string;
+  eventTitle: string;
+  houseName: string;
+  houseId: string;
+  date: string;
+  time?: string;
+  location?: string;
+  meetingLink?: string;
+  eventLevel?: string;
+}): Promise<boolean> {
+  const timeStr = params.time ? ` at ${params.time}` : '';
+  return sendNotification({
+    userIds: params.userIds,
+    type: 'meeting_reminder',
+    title: `📅 New Event: ${params.eventTitle}`,
+    body: `${params.houseName} has a ${params.eventLevel || 'house'} event on ${params.date}${timeStr}${params.location ? ` · ${params.location}` : ''}.`,
+    data: {
+      eventId: params.eventId,
+      houseName: params.houseName,
+      houseId: params.houseId,
+      date: params.date,
+      time: params.time || '',
+      location: params.location,
+      meetingLink: params.meetingLink,
+      meetingType: params.eventLevel || 'house',
+    },
+    priority: 'high',
   });
 }

@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   message: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.lg,
-    fontWeight: '500',
     color: colors.text_primary,
     textAlign: 'center',
     marginBottom: spacing.lg,
@@ -62,8 +62,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent_green,
   },
   actionButtonText: {
+    fontFamily: 'Poppins-Medium',
     fontSize: fontSize.md,
-    fontWeight: '600',
     color: colors.bg_primary,
   },
 });
