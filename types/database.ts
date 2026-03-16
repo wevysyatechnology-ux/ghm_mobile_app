@@ -21,6 +21,7 @@ export interface UserProfile {
   attendance_status: AttendanceStatus;
   absence_count: number;
   is_suspended: boolean;
+  membership_status?: string | null;
   created_at: string;
 }
 

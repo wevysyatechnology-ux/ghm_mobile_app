@@ -79,13 +79,19 @@ export const authService = {
           await this.ensureProfileExists(data.user.id, data.user.phone || '');
         }
 
-        // Check if membership is blocked (resigned/expired/terminated)
-        const blockedStatus = await this.checkBlockedMembership(data.user.id);
-        if (blockedStatus) {
+        // Check membership_status from profiles table before allowing login
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('membership_status')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        const membershipStatus = profileRow?.membership_status;
+        if (membershipStatus && membershipStatus !== 'active') {
           await supabase.auth.signOut();
           return {
             success: false,
-            error: `Your account has been ${blockedStatus}. Please contact your admin.`,
+            error: `Your account is ${membershipStatus}. Please contact your administrator.`,
           };
         }
 
@@ -324,10 +330,10 @@ export const authService = {
         return null;
       }
 
-      // Fetch from profiles table to get house_id, zone, business, and full_name
+      // Fetch from profiles table to get house_id, zone, business, full_name, and membership_status
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('house_id, zone, business, full_name')
+        .select('house_id, zone, business, full_name, membership_status')
         .eq('id', userId)
         .maybeSingle();
 
@@ -375,6 +381,7 @@ export const authService = {
         zone: houseZone || profilesData?.zone || null,
         business: profilesData?.business || null,
         house: houseData || null,
+        membership_status: profilesData?.membership_status ?? null,
       };
 
       return mergedProfile;
@@ -452,7 +459,20 @@ export const authService = {
 
   async checkBlockedMembership(userId: string): Promise<string | null> {
     try {
-      const { data } = await supabase
+      // Primary check: profiles table (membership_status column)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('membership_status')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profileData?.membership_status &&
+          BLOCKED_MEMBER_STATUSES.includes(profileData.membership_status as any)) {
+        return profileData.membership_status;
+      }
+
+      // Fallback: core_memberships table
+      const { data: membershipData } = await supabase
         .from('core_memberships')
         .select('membership_status')
         .eq('user_id', userId)
@@ -460,9 +480,11 @@ export const authService = {
         .limit(1)
         .maybeSingle();
 
-      if (data && BLOCKED_MEMBER_STATUSES.includes(data.membership_status as any)) {
-        return data.membership_status;
+      if (membershipData?.membership_status &&
+          BLOCKED_MEMBER_STATUSES.includes(membershipData.membership_status as any)) {
+        return membershipData.membership_status;
       }
+
       return null;
     } catch (error) {
       console.error('Error checking membership status:', error);
