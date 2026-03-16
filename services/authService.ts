@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { UserProfile } from '@/types/database';
+import { UserProfile, BLOCKED_MEMBER_STATUSES } from '@/types/database';
 
 export interface AuthResponse {
   success: boolean;
@@ -77,6 +77,16 @@ export const authService = {
 
         if (!profile) {
           await this.ensureProfileExists(data.user.id, data.user.phone || '');
+        }
+
+        // Check if membership is blocked (resigned/expired/terminated)
+        const blockedStatus = await this.checkBlockedMembership(data.user.id);
+        if (blockedStatus) {
+          await supabase.auth.signOut();
+          return {
+            success: false,
+            error: `Your account has been ${blockedStatus}. Please contact your admin.`,
+          };
         }
 
         return {
@@ -438,6 +448,26 @@ export const authService = {
         coreMembership: null,
         virtualMembership: null,
       };
+    }
+  },
+
+  async checkBlockedMembership(userId: string): Promise<string | null> {
+    try {
+      const { data } = await supabase
+        .from('core_memberships')
+        .select('membership_status')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data && BLOCKED_MEMBER_STATUSES.includes(data.membership_status as any)) {
+        return data.membership_status;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error checking membership status:', error);
+      return null;
     }
   },
 

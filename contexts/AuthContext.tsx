@@ -53,6 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔄 AuthContext - membership info:', membershipInfo);
         setCoreMembership(membershipInfo.coreMembership);
         setVirtualMembership(membershipInfo.virtualMembership);
+
+        // Auto-logout if membership is resigned/expired/terminated
+        const blockedStatus = await authService.checkBlockedMembership(uid);
+        if (blockedStatus) {
+          console.warn(`⛔ Member status is '${blockedStatus}' — signing out automatically`);
+          await authService.signOut();
+          return;
+        }
       }
     } catch (error) {
       console.error('❌ Error loading user data:', error);
