@@ -315,10 +315,11 @@ export const authService = {
       }
 
       // Fetch from profiles table to get house_id, zone, business, and full_name
+      // Check both id and auth_user_id columns to handle both schema conventions
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('house_id, zone, business, full_name')
-        .eq('id', userId)
+        .or(`id.eq.${userId},auth_user_id.eq.${userId}`)
         .maybeSingle();
 
       if (profilesError) {
