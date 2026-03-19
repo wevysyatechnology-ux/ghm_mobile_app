@@ -2,12 +2,15 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { User as UserIcon } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '@/constants/theme';
 import type { User } from '@/types';
+import ProfilePictureUploader from './ProfilePictureUploader';
 
 interface ProfileHeaderProps {
   user: User;
+  /** When provided the avatar becomes tappable for upload */
+  onPhotoUpdated?: (url: string) => void;
 }
 
-export default function ProfileHeader({ user }: ProfileHeaderProps) {
+export default function ProfileHeader({ user, onPhotoUpdated }: ProfileHeaderProps) {
   const getBadgeColor = () => {
     if (user.tier === 'privileged') return '#FFD700';
     if (user.tier === 'regular') return colors.accent_green;
@@ -21,14 +24,21 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.avatarContainer}>
-        {user.profile_photo ? (
+        {onPhotoUpdated && user.id ? (
+          <ProfilePictureUploader
+            userId={user.id}
+            currentPhotoUrl={user.profile_photo}
+            size={100}
+            onUploadSuccess={onPhotoUpdated}
+          />
+        ) : user.profile_photo ? (
           <Image source={{ uri: user.profile_photo }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <UserIcon size={48} color={colors.text_secondary} />
           </View>
         )}
-        {user.is_online && <View style={styles.onlineIndicator} />}
+        {!onPhotoUpdated && user.is_online && <View style={styles.onlineIndicator} />}
       </View>
 
       <Text style={styles.name}>{user.name}</Text>

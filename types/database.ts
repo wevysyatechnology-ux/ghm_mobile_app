@@ -22,6 +22,7 @@ export interface UserProfile {
   absence_count: number;
   is_suspended: boolean;
   membership_status?: string | null;
+  profile_photo?: string | null;
   created_at: string;
 }
 
