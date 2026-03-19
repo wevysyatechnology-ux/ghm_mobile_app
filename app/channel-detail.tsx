@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, Plus } from 'lucide-react-native';
@@ -38,6 +40,7 @@ export default function ChannelDetailScreen() {
   const [newPostContent, setNewPostContent] = useState('');
   const [creating, setCreating] = useState(false);
   const [linksFilter, setLinksFilter] = useState<'all' | 'received' | 'given'>('all');
+  const [selectedLink, setSelectedLink] = useState<CoreLink | null>(null);
 
   const filteredLinks = useMemo(() => {
     if (!user?.id) return links;
@@ -133,8 +136,12 @@ export default function ChannelDetailScreen() {
       normalizedSlug.includes('meeting') ||
       normalizedName.includes('i2we') ||
       normalizedName.includes('meeting');
+    const isLinksChannel =
+      normalizedSlug === 'links' || normalizedName === 'links';
 
-    return isI2WEChannel ? 'Track one-on-one meetings' : targetChannel.description;
+    if (isI2WEChannel) return 'Track one-on-one meetings';
+    if (isLinksChannel) return 'Share Links Easily';
+    return targetChannel.description;
   };
 
   useEffect(() => {
@@ -376,7 +383,11 @@ export default function ChannelDetailScreen() {
                 </View>
               ) : (
                 filteredLinks.map((link) => (
-                  <View key={link.id} style={styles.postCard}>
+                  <TouchableOpacity
+                    key={link.id}
+                    style={styles.postCard}
+                    onPress={() => setSelectedLink(link)}
+                    activeOpacity={0.75}>
                     <View style={styles.linkHeaderRow}>
                       <Text style={styles.postTitle}>{link.title}</Text>
                       <View style={styles.linkTag}>
@@ -390,7 +401,7 @@ export default function ChannelDetailScreen() {
                     <Text style={styles.postDate}>
                       {new Date(link.created_at).toLocaleDateString()}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </>
@@ -602,6 +613,81 @@ export default function ChannelDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Link Detail Modal */}
+      <Modal
+        visible={!!selectedLink}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedLink(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedLink(null)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            {selectedLink && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>{selectedLink.title}</Text>
+                  <View style={styles.linkTag}>
+                    <Text style={styles.linkTagText}>
+                      {selectedLink.to_user_id === user?.id ? 'Received' : 'Given'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalDivider} />
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Contact Name</Text>
+                  <Text style={styles.modalValue}>{selectedLink.contact_name}</Text>
+                </View>
+
+                {selectedLink.contact_phone ? (
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalLabel}>Phone</Text>
+                    <Text style={styles.modalValue}>{selectedLink.contact_phone}</Text>
+                  </View>
+                ) : null}
+
+                {selectedLink.contact_email ? (
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalLabel}>Email</Text>
+                    <Text style={styles.modalValue}>{selectedLink.contact_email}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Status</Text>
+                  <Text style={styles.modalValue}>{selectedLink.status}</Text>
+                </View>
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Urgency</Text>
+                  <Text style={styles.modalValue}>{selectedLink.urgency}</Text>
+                </View>
+
+                {selectedLink.description ? (
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalLabel}>Description</Text>
+                    <Text style={styles.modalValue}>{selectedLink.description}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Date</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date(selectedLink.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.modalCloseBtn}
+                  onPress={() => setSelectedLink(null)}>
+                  <Text style={styles.modalCloseBtnText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -912,6 +998,69 @@ const styles = StyleSheet.create({
   },
   joinBtnText: {
     fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: '700',
+    color: COLORS.onPrimary || '#000',
+  },
+  // Link detail modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    paddingBottom: SPACING.xl + 16,
+    borderTopWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  modalTitle: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+    flex: 1,
+    marginRight: SPACING.md,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  modalLabel: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    flex: 1,
+  },
+  modalValue: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text,
+    flex: 2,
+    textAlign: 'right',
+  },
+  modalCloseBtn: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    fontSize: TYPOGRAPHY.sizes.md,
     fontWeight: '700',
     color: COLORS.onPrimary || '#000',
   },
