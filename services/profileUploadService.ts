@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
 import { Platform } from 'react-native';
 
@@ -86,15 +87,29 @@ export async function cropResizeAndUpload(
     context.release();
     imageRef.release();
 
-    // Convert to blob for upload
-    const response = await fetch(saved.uri);
-    const blob = await response.blob();
-
     const fileName = `${userId}/avatar_${Date.now()}.jpg`;
+
+    // On native, fetch('file://...') throws "Network request failed".
+    // Use expo-file-system to read as base64 then convert to Uint8Array.
+    let uploadBody: Uint8Array | Blob;
+    if (Platform.OS === 'web') {
+      const response = await fetch(saved.uri);
+      uploadBody = await response.blob();
+    } else {
+      const base64 = await FileSystem.readAsStringAsync(saved.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      uploadBody = bytes;
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(fileName, blob, {
+      .upload(fileName, uploadBody, {
         contentType: 'image/jpeg',
         upsert: true,
       });
