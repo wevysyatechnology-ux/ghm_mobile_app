@@ -7,7 +7,7 @@ export interface AuthResponse {
   needsVerification?: boolean;
 }
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 const DEV_OTP = '1234';
 const DEV_USER_ID = '00000000-0000-0000-0000-000000000001';
 

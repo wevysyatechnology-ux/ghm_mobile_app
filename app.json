@@ -2,7 +2,7 @@
   "expo": {
     "name": "WeVysya AI",
     "slug": "wevysya-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -12,7 +12,7 @@
     },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "notification": {
       "icon": "./assets/images/icon.png",
       "color": "#FF6B35",
@@ -20,7 +20,7 @@
       "androidCollapsedTitle": "WeVysya"
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
@@ -48,6 +48,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "2",
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
         "UIBackgroundModes": [
