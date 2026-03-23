@@ -12,7 +12,7 @@
     },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "notification": {
       "icon": "./assets/images/icon.png",
       "color": "#FF6B35",
