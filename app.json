@@ -2,7 +2,7 @@
   "expo": {
     "name": "WeVysya AI",
     "slug": "wevysya-app",
-    "version": "1.0.1",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -20,7 +20,7 @@
       "androidCollapsedTitle": "WeVysya"
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 4,
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
