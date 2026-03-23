@@ -55,6 +55,7 @@
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "We need microphone access to enable voice commands for the AI assistant.",
         "NSPhotoLibraryUsageDescription": "We need access to your photo library to let you set a profile picture.",
         "NSCameraUsageDescription": "We need camera access to let you take a profile photo."
       }
