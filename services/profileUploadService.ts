@@ -21,6 +21,10 @@ export interface PickedImage {
 
 async function requestPermissions(): Promise<boolean> {
   if (Platform.OS === 'web') return true;
+  // Android Photo Picker (Android 11+) is permission-less — no READ_MEDIA_IMAGES needed.
+  // Requesting it would cause Google Play to reject the app for invalid permission use.
+  if (Platform.OS === 'android') return true;
+  // iOS still requires explicit photo library permission.
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   return status === 'granted';
 }
