@@ -11,12 +11,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error(`📍 URL: ${supabaseUrl ? '✅ Found' : '❌ Missing'}`);
   console.error(`🔑 Key: ${supabaseAnonKey ? '✅ Found' : '❌ Missing'}`);
   console.error('💡 Check EAS build configuration or .env file');
-
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file.\n' +
-    `URL: ${supabaseUrl ? 'Found' : 'Missing'}\n` +
-    `Key: ${supabaseAnonKey ? 'Found' : 'Missing'}`
-  );
 }
 
 const ExpoSecureStoreAdapter = {
@@ -31,11 +25,17 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: Platform.OS === 'web' ? localStorage : ExpoSecureStoreAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
+// Use placeholder values if env vars are missing so the app boots and shows an
+// error state instead of crashing. All API calls will fail gracefully.
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      storage: Platform.OS === 'web' ? localStorage : ExpoSecureStoreAdapter,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  }
+);

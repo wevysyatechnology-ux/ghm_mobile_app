@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { UserProfile } from '@/types/database';
+import { UserProfile, BLOCKED_MEMBER_STATUSES } from '@/types/database';
 
 export interface AuthResponse {
   success: boolean;
@@ -7,7 +7,7 @@ export interface AuthResponse {
   needsVerification?: boolean;
 }
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 const DEV_OTP = '1234';
 const DEV_USER_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -77,6 +77,22 @@ export const authService = {
 
         if (!profile) {
           await this.ensureProfileExists(data.user.id, data.user.phone || '');
+        }
+
+        // Check membership_status from profiles table before allowing login
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('membership_status')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        const membershipStatus = profileRow?.membership_status;
+        if (membershipStatus && membershipStatus !== 'active') {
+          await supabase.auth.signOut();
+          return {
+            success: false,
+            error: `Your account is ${membershipStatus}. Please contact your administrator.`,
+          };
         }
 
         return {
@@ -314,12 +330,11 @@ export const authService = {
         return null;
       }
 
-      // Fetch from profiles table to get house_id, zone, business, and full_name
-      // Check both id and auth_user_id columns to handle both schema conventions
+      // Fetch from profiles table to get house_id, zone, business, full_name, and membership_status
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('house_id, zone, business, full_name')
-        .or(`id.eq.${userId},auth_user_id.eq.${userId}`)
+        .select('house_id, zone, business, full_name, membership_status')
+        .eq('id', userId)
         .maybeSingle();
 
       if (profilesError) {
@@ -366,6 +381,7 @@ export const authService = {
         zone: houseZone || profilesData?.zone || null,
         business: profilesData?.business || null,
         house: houseData || null,
+        membership_status: profilesData?.membership_status ?? null,
       };
 
       return mergedProfile;
@@ -438,6 +454,41 @@ export const authService = {
         coreMembership: null,
         virtualMembership: null,
       };
+    }
+  },
+
+  async checkBlockedMembership(userId: string): Promise<string | null> {
+    try {
+      // Primary check: profiles table (membership_status column)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('membership_status')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profileData?.membership_status &&
+          BLOCKED_MEMBER_STATUSES.includes(profileData.membership_status as any)) {
+        return profileData.membership_status;
+      }
+
+      // Fallback: core_memberships table
+      const { data: membershipData } = await supabase
+        .from('core_memberships')
+        .select('membership_status')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (membershipData?.membership_status &&
+          BLOCKED_MEMBER_STATUSES.includes(membershipData.membership_status as any)) {
+        return membershipData.membership_status;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error checking membership status:', error);
+      return null;
     }
   },
 

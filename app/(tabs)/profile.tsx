@@ -1,4 +1,5 @@
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Alert, Platform } from 'react-native';
+import { useState } from 'react';
 import { colors, spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -10,6 +11,7 @@ import { LogOut } from 'lucide-react-native';
 
 export default function Profile() {
   const { profile, user, coreMembership, virtualMembership, signOut } = useAuth();
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string | undefined>(undefined);
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
@@ -68,7 +70,7 @@ export default function Profile() {
     location: locationText,
     circle: circleType,
     tier: tierType,
-    profile_photo: undefined,
+    profile_photo: localPhotoUrl ?? profile?.profile_photo ?? undefined,
     is_online: true,
     created_at: profile?.created_at || new Date().toISOString(),
   };
@@ -81,7 +83,7 @@ export default function Profile() {
         <View style={styles.logoContainer}>
           <FloatingLogo size="medium" />
         </View>
-        <ProfileHeader user={userData} />
+        <ProfileHeader user={userData} onPhotoUpdated={(url) => setLocalPhotoUrl(url)} />
         {profile?.vertical_type === 'inner_circle' && profile.attendance_status && (
           <AttendanceStatusBanner
             attendanceStatus={profile.attendance_status}

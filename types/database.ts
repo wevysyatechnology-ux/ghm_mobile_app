@@ -1,6 +1,7 @@
 export type VerticalType = 'inner_circle' | 'open_circle';
 export type MembershipType = 'regular' | 'privileged';
-export type MembershipStatus = 'active' | 'expired' | 'suspended';
+export type MembershipStatus = 'active' | 'expired' | 'suspended' | 'resigned' | 'terminated';
+export const BLOCKED_MEMBER_STATUSES: MembershipStatus[] = ['resigned', 'expired', 'terminated'];
 export type LinkStatus = 'open' | 'closed';
 export type AttendanceStatus = 'normal' | 'probation' | 'category_open' | 'removal_eligible';
 
@@ -20,6 +21,8 @@ export interface UserProfile {
   attendance_status: AttendanceStatus;
   absence_count: number;
   is_suspended: boolean;
+  membership_status?: string | null;
+  profile_photo?: string | null;
   created_at: string;
 }
 

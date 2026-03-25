@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "WeVysya",
+    "name": "WeVysya AI",
     "slug": "wevysya-app",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -20,7 +20,7 @@
       "androidCollapsedTitle": "WeVysya"
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 5,
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
@@ -40,17 +40,22 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "NOTIFICATIONS",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "CAMERA"
       ]
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "buildNumber": "2",
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "We need microphone access to enable voice commands for the AI assistant.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to let you set a profile picture.",
+        "NSCameraUsageDescription": "We need camera access to let you take a profile photo."
       }
     },
     "web": {
@@ -72,6 +77,13 @@
       ],
       "expo-web-browser",
       "expo-dev-client",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "We need access to your photo library to let you set a profile picture.",
+          "cameraPermission": "We need camera access to let you take a profile photo."
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",

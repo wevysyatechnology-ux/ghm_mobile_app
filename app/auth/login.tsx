@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
   Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -145,7 +146,16 @@ export default function LoginScreen() {
       if (errorMsg.includes('Invalid login credentials')) {
         errorMsg = 'Account does not exist. Please contact admin to create your account.';
       }
-      setError(errorMsg);
+      // Show membership restriction errors as a prominent Alert popup
+      if (errorMsg.toLowerCase().includes('contact your administrator')) {
+        Alert.alert(
+          'Account Access Restricted',
+          errorMsg,
+          [{ text: 'OK', style: 'default' }]
+        );
+      } else {
+        setError(errorMsg);
+      }
     }
   };
 
