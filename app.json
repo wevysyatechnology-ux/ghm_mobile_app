@@ -20,7 +20,7 @@
       "androidCollapsedTitle": "WeVysya"
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 5,
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
@@ -41,13 +41,11 @@
         "VIBRATE",
         "NOTIFICATIONS",
         "POST_NOTIFICATIONS",
-        "READ_MEDIA_IMAGES",
-        "READ_EXTERNAL_STORAGE",
         "CAMERA"
       ]
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "buildNumber": "2",
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
