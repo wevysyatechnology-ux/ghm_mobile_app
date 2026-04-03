@@ -17,6 +17,57 @@ const TEST_USER_EMAIL = 'test9902093811@wevysya.com';
 const TEST_USER_PASSWORD = 'TestUser123!';
 
 export const authService = {
+  normalizeMembershipStatus(status: string | null | undefined): string | null {
+    if (!status) {
+      return null;
+    }
+    return status.trim().toLowerCase();
+  },
+
+  isBlockedMembershipStatus(status: string | null | undefined): boolean {
+    const normalized = this.normalizeMembershipStatus(status);
+    return normalized ? BLOCKED_MEMBER_STATUSES.includes(normalized as any) : false;
+  },
+
+  async checkAndEnforceBlock(userId: string): Promise<{ blocked: boolean, reason?: string }> {
+    const { data: up } = await supabase
+      .from('users_profile')
+      .select('is_suspended, membership_status')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const upStatus = this.normalizeMembershipStatus(up?.membership_status);
+    if (this.isBlockedMembershipStatus(upStatus)) {
+      return {
+        blocked: true,
+        reason: upStatus || 'suspended',
+      };
+    }
+
+    const { data: p } = await supabase
+      .from('profiles')
+      .select('membership_status')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const profileStatus = this.normalizeMembershipStatus(p?.membership_status);
+
+    if (this.isBlockedMembershipStatus(profileStatus)) {
+      return {
+        blocked: true,
+        reason: profileStatus || 'suspended',
+      };
+    }
+
+    // If an admin has explicitly marked membership active in either table,
+    // treat stale suspension flags as non-blocking.
+    const hasExplicitActive = upStatus === 'active' || profileStatus === 'active';
+    if (up?.is_suspended && !hasExplicitActive) {
+      return { blocked: true, reason: 'suspended' };
+    }
+
+    return { blocked: false };
+  },
   async signUp(email: string, password: string): Promise<AuthResponse> {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -79,19 +130,12 @@ export const authService = {
           await this.ensureProfileExists(data.user.id, data.user.phone || '');
         }
 
-        // Check membership_status from profiles table before allowing login
-        const { data: profileRow } = await supabase
-          .from('profiles')
-          .select('membership_status')
-          .eq('id', data.user.id)
-          .maybeSingle();
-
-        const membershipStatus = profileRow?.membership_status;
-        if (membershipStatus && membershipStatus !== 'active') {
+        const blockCheck = await this.checkAndEnforceBlock(data.user.id);
+        if (blockCheck.blocked) {
           await supabase.auth.signOut();
           return {
             success: false,
-            error: `Your account is ${membershipStatus}. Please contact your administrator.`,
+            error: `Your account is ${blockCheck.reason}. Please contact your administrator.`,
           };
         }
 
@@ -170,6 +214,11 @@ export const authService = {
 
           if (!signInError && signInData?.user) {
             await this.ensureProfileExists(signInData.user.id, phoneNumber);
+            const blockCheck = await this.checkAndEnforceBlock(signInData.user.id);
+            if (blockCheck.blocked) {
+              await supabase.auth.signOut();
+              return { success: false, error: `Your account is ${blockCheck.reason}.` };
+            }
             return { success: true };
           }
 
@@ -261,6 +310,11 @@ export const authService = {
 
       if (data.user) {
         await this.ensureProfileExists(data.user.id, phoneNumber);
+        const blockCheck = await this.checkAndEnforceBlock(data.user.id);
+        if (blockCheck.blocked) {
+          await supabase.auth.signOut();
+          return { success: false, error: `Your account is ${blockCheck.reason}. Please contact your administrator.` };
+        }
       }
 
       return {
@@ -489,6 +543,58 @@ export const authService = {
     } catch (error) {
       console.error('Error checking membership status:', error);
       return null;
+    }
+  },
+
+  async deleteAccount(userId: string): Promise<AuthResponse> {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ membership_status: 'resigned' })
+        .eq('id', userId);
+
+      const { error } = await supabase
+        .from('users_profile')
+        .update({ membership_status: 'resigned', is_suspended: true })
+        .eq('id', userId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      await supabase.auth.signOut();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to delete account' };
+    }
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const email = sessionData.session?.user?.email;
+      if (!email) {
+        return { success: false, error: 'No active session found.' };
+      }
+
+      // Re-authenticate with current password to verify it
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        return { success: false, error: 'Current password is incorrect.' };
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to change password.' };
     }
   },
 

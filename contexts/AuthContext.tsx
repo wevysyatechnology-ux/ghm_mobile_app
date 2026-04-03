@@ -17,6 +17,8 @@ interface AuthContextType {
   blockedStatus: string | null;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,15 +55,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(userProfile);
 
       if (userProfile) {
-        // Check membership_status directly from profile (profiles table)
-        const status = userProfile.membership_status;
-        if (status && status !== 'active') {
-          console.warn(`⛔ Membership status is '${status}' — blocking access`);
-          setBlockedStatus(status);
+        // Keep block decision in one place to avoid auth/login and context drift.
+        const blockCheck = await authService.checkAndEnforceBlock(uid);
+        if (blockCheck.blocked) {
+          const reason = blockCheck.reason || 'suspended';
+          console.warn(`⛔ Account blocked with reason '${reason}' — blocking access`);
+          setBlockedStatus(reason);
           return;
-        } else {
-          setBlockedStatus(null);
         }
+
+        setBlockedStatus(null);
 
         const membershipInfo = await authService.getMembershipInfo(uid);
         console.log('🔄 AuthContext - membership info:', membershipInfo);
@@ -91,6 +94,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const deleteAccount = async () => {
+    if (userId) {
+      try {
+        await authService.deleteAccount(userId);
+        setUser(null);
+        setUserId(null);
+        setProfile(null);
+        setCoreMembership(null);
+        setVirtualMembership(null);
+        setBlockedStatus(null);
+      } catch (error) {
+        console.error('Error deleting account:', error);
+      }
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    return authService.changePassword(currentPassword, newPassword);
   };
 
   useEffect(() => {
@@ -152,6 +175,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         blockedStatus,
         refreshProfile,
         signOut,
+        deleteAccount,
+        changePassword,
       }}>
       {blockedStatus ? (
         <View style={blockedStyles.container}>

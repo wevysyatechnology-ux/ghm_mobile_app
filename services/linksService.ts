@@ -36,10 +36,34 @@ export const LinksService = {
         return [];
       }
 
-      // Filter out current user
-      const otherMembers = profilesData.filter((p: any) => p.id !== currentUserId);
+      // The RPC doesn't return membership_status/is_suspended, so fetch them separately.
+      const memberIds = profilesData
+        .filter((p: any) => p.id !== currentUserId)
+        .map((p: any) => p.id as string);
 
-      console.log('Members after filtering current user:', otherMembers.length);
+      const blockedStatuses = ['expired', 'suspended', 'resigned', 'terminated', 'inactive'];
+
+      let blockedIds = new Set<string>();
+      if (memberIds.length > 0) {
+        const { data: statusData } = await supabase
+          .from('users_profile')
+          .select('id, membership_status, is_suspended')
+          .in('id', memberIds);
+
+        for (const s of statusData || []) {
+          const status = (s.membership_status || '').toString().toLowerCase();
+          if (blockedStatuses.includes(status) || s.is_suspended === true) {
+            blockedIds.add(s.id);
+          }
+        }
+      }
+
+      // Filter out current user and blocked (inactive/suspended) members
+      const otherMembers = profilesData.filter(
+        (p: any) => p.id !== currentUserId && !blockedIds.has(p.id)
+      );
+
+      console.log('Members after filtering current user and inactive:', otherMembers.length);
 
       // Sort by full_name
       const sortedProfiles = otherMembers.sort((a: any, b: any) =>

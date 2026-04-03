@@ -20,6 +20,7 @@ import {
   CheckCircle,
   CalendarClock,
   ExternalLink,
+  ScanLine,
 } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, fontFamily } from '@/constants/theme';
 import { EventsService, EventMeeting } from '@/services/eventsService';
@@ -105,7 +106,12 @@ export default function EventMeetings() {
           <ChevronLeft size={22} color={colors.text_primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event Meetings</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          style={styles.scanBtn}
+          onPress={() => router.push('/attendance-scan' as any)}
+          activeOpacity={0.85}>
+          <ScanLine size={18} color={colors.accent_green_bright} />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -320,7 +326,16 @@ const styles = StyleSheet.create({
     color: colors.text_primary,
     textAlign: 'center',
   },
-  headerSpacer: { width: 36 },
+  scanBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(52,211,153,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.2)',
+  },
 
   // Tabs
   tabRow: {

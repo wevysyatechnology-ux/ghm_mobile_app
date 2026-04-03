@@ -23,6 +23,7 @@ export interface UserProfile {
   is_suspended: boolean;
   membership_status?: string | null;
   profile_photo?: string | null;
+  ai_consent?: 'accepted' | 'declined' | null;
   created_at: string;
 }
 

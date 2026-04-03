@@ -41,5 +41,3 @@ supabase/.temp/
 *.apk
 *.aab
 *.ipa
-# local secrets
-service-account-file.json

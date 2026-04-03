@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Sparkles, Users, TrendingUp } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '@/constants/theme';
+import { useAIConsent } from '@/contexts/AIConsentContext';
 
 const ACTIONS = [
   {
@@ -21,6 +22,21 @@ const ACTIONS = [
 ];
 
 export default function AIProfileActions() {
+  const { isConsentGranted, consentStatus, requestConsent } = useAIConsent();
+
+  const handleActionPress = () => {
+    if (isConsentGranted) {
+      // AI feature logic will be implemented here
+      return;
+    }
+    if (consentStatus === 'declined') {
+      const msg = 'AI features are disabled. To enable them, go to Settings and accept the AI consent.';
+      Platform.OS === 'web' ? alert(msg) : Alert.alert('AI Features Disabled', msg);
+      return;
+    }
+    requestConsent();
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>AI Insights</Text>
@@ -29,7 +45,8 @@ export default function AIProfileActions() {
         return (
           <TouchableOpacity
             key={index}
-            style={styles.actionCard}
+            style={[styles.actionCard, !isConsentGranted && styles.actionCardDisabled]}
+            onPress={handleActionPress}
             activeOpacity={0.7}>
             <View style={styles.iconContainer}>
               <IconComponent size={20} color={colors.accent_green} />
@@ -64,6 +81,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: '#2A2F2E',
+  },
+  actionCardDisabled: {
+    opacity: 0.5,
   },
   iconContainer: {
     width: 40,

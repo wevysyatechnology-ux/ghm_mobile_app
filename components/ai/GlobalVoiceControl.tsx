@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAIConsent } from '@/contexts/AIConsentContext';
 import { voiceOS } from '@/services/voiceOSService';
 import { actionEngine } from '@/services/actionEngine';
 import { knowledgeService } from '@/services/knowledgeService';
@@ -12,6 +13,7 @@ export default function GlobalVoiceControl() {
     const router = useRouter();
     const pathname = usePathname();
     const { isAuthenticated, isLoading } = useAuth();
+    const { isConsentGranted, requestConsent } = useAIConsent();
 
     const [orbState, setOrbState] = useState<'idle' | 'listening' | 'thinking' | 'responding'>('idle');
     const [toastMessage, setToastMessage] = useState('');
@@ -40,6 +42,10 @@ export default function GlobalVoiceControl() {
     }
 
     const handleMicPress = async () => {
+        if (!isConsentGranted) {
+            requestConsent();
+            return;
+        }
         try {
             if (orbState === 'responding') {
                 // Stop speaking immediately

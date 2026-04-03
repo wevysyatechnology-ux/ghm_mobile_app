@@ -63,6 +63,7 @@ export default function RootLayout() {
           <Stack.Screen name="call" options={{ headerShown: false }} />
           <Stack.Screen name="event-meetings" options={{ headerShown: false }} />
           <Stack.Screen name="event-detail" options={{ headerShown: false }} />
+          <Stack.Screen name="attendance-scan" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <GlobalVoiceControl />

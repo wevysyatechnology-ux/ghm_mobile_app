@@ -2,7 +2,7 @@
   "expo": {
     "name": "WeVysya AI",
     "slug": "wevysya-app",
-    "version": "2.0.0",
+    "version": "2.3.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -20,7 +20,7 @@
       "androidCollapsedTitle": "WeVysya"
     },
     "android": {
-      "versionCode": 5,
+      "versionCode": 6,
       "package": "com.wevysya.app",
       "googleServicesFile": "./google-services.json",
       "splash": {
@@ -46,9 +46,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "2",
+      "requireFullScreen": true,
+      "buildNumber": "12",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.wevysya.app",
       "infoPlist": {
+        "UIDeviceFamily": [
+          1
+        ],
         "UIBackgroundModes": [
           "remote-notification"
         ],
