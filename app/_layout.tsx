@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AIProvider } from '@/contexts/AIContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AIConsentProvider } from '@/contexts/AIConsentContext';
 import GlobalVoiceControl from '@/components/ai/GlobalVoiceControl';
 
 // Keep the splash screen visible while we fetch resources
@@ -54,20 +55,22 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <AIProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/verify" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/profile-setup" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="call" options={{ headerShown: false }} />
-          <Stack.Screen name="event-meetings" options={{ headerShown: false }} />
-          <Stack.Screen name="event-detail" options={{ headerShown: false }} />
-          <Stack.Screen name="attendance-scan" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <GlobalVoiceControl />
-        <StatusBar style="light" />
+        <AIConsentProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/verify" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/profile-setup" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="call" options={{ headerShown: false }} />
+            <Stack.Screen name="event-meetings" options={{ headerShown: false }} />
+            <Stack.Screen name="event-detail" options={{ headerShown: false }} />
+            <Stack.Screen name="attendance-scan" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <GlobalVoiceControl />
+          <StatusBar style="light" />
+        </AIConsentProvider>
       </AIProvider>
     </AuthProvider>
   );
