@@ -33,8 +33,6 @@ yarn-error.*
 
 # secrets / service account keys
 service-account-file.json
-google-services.json
-google-services*.json
 
 # typescript
 *.tsbuildinfo
